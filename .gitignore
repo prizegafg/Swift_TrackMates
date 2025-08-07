@@ -1,2 +1,7 @@
+#AI Integration
 bundle_trackmates.py
 /AI Integration
+
+# Xcode user state
+xcuserdata/
+*.xcuserstate
