@@ -25,3 +25,16 @@ final class LoginRouter: LoginRouterProtocol {
         // view.present(registerVC, animated: true)
     }
 }
+
+extension LoginRouter {
+    static func makeModule() -> UIViewController {
+        let interactor = LoginInteractor()
+        let presenter = LoginPresenter(interactor: interactor)
+        let view = Login()
+        view.presenter = presenter
+        let nav = UINavigationController(rootViewController: view)
+        nav.navigationBar.isTranslucent = false
+        nav.navigationBar.prefersLargeTitles = false
+        return nav
+    }
+}

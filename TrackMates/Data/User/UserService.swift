@@ -10,6 +10,7 @@ import FirebaseFirestore
 
 protocol UserServiceProtocol {
     func fetchUser(userId: String, completion: @escaping (Result<UserEntity, Error>) -> Void)
+    func saveUser(user: UserEntity, completion: @escaping (Result<Void, Error>) -> Void)
 }
 
 final class UserService: UserServiceProtocol {
@@ -36,4 +37,21 @@ final class UserService: UserServiceProtocol {
             completion(.success(userEntity))
         }
     }
+    
+    func saveUser(user: UserEntity, completion: @escaping (Result<Void, Error>) -> Void) {
+           let userData: [String: Any] = [
+               "username": user.username,
+               "firstName": user.firstName,
+               "lastName": user.lastName,
+               "email": user.email,
+               "dateOfBirth": ISO8601DateFormatter().string(from: user.dateOfBirth)
+           ]
+           db.collection("users").document(user.id).setData(userData) { error in
+               if let error = error {
+                   completion(.failure(error))
+               } else {
+                   completion(.success(()))
+               }
+           }
+       }
 }

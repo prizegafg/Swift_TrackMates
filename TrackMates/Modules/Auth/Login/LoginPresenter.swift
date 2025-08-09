@@ -5,8 +5,6 @@
 //  Created by Prizega Fromadia on 06/08/25.
 //
 
-import Foundation
-import Combine
 
 import Foundation
 import Combine
@@ -31,18 +29,10 @@ final class LoginPresenter: LoginPresenterProtocol {
     }
 
     func login(email: String, password: String) {
-        interactor.loginToFirebase(email: email, password: password) { [weak self] result in
+        interactor.login(email: email, password: password) { [weak self] result in
             switch result {
-            case .success(let userEntity):
-                // Setelah dapat user dari Firebase, simpan ke CoreData
-                self?.interactor.saveUserToLocal(userEntity) { saveResult in
-                    switch saveResult {
-                    case .success:
-                        self?.loginResultSubject.send(userEntity)
-                    case .failure(let saveError):
-                        self?.errorSubject.send("Failed to save user: \(saveError.localizedDescription)")
-                    }
-                }
+            case .success(let user):
+                self?.loginResultSubject.send(user)
             case .failure(let error):
                 self?.errorSubject.send(error.localizedDescription)
             }

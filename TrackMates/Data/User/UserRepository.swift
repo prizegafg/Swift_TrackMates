@@ -11,8 +11,10 @@ import UIKit
 
 protocol UserRepositoryProtocol {
     func replaceLocal(_ user: UserEntity, completion: @escaping (Result<Void, Error>) -> Void)
+    func current(_ completion: @escaping (Result<UserEntity?, Error>) -> Void)
+    func get(_ id: String, _ completion: @escaping (Result<UserEntity?, Error>) -> Void)
 }
-
+// MARK: - Write
 final class UserRepository: UserRepositoryProtocol {
     private let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
 
@@ -37,5 +39,48 @@ final class UserRepository: UserRepositoryProtocol {
         } catch {
             completion(.failure(error))
         }
+    }
+}
+
+
+// MARK: - Read
+extension UserRepository {
+    func current(_ completion: @escaping (Result<UserEntity?, Error>) -> Void) {
+        // ambil user pertama (atau terakhir login kalau kamu nanti simpan metadata)
+        let req: NSFetchRequest<UserCD> = UserCD.fetchRequest()
+        req.fetchLimit = 1
+        do {
+            let cd = try context.fetch(req).first
+            completion(.success(cd.flatMap { $0.toEntity() }))
+        } catch {
+            completion(.failure(error))
+        }
+    }
+
+    func get(_ id: String, _ completion: @escaping (Result<UserEntity?, Error>) -> Void) {
+        let req: NSFetchRequest<UserCD> = UserCD.fetchRequest()
+        req.predicate = NSPredicate(format: "id == %@", id)
+        req.fetchLimit = 1
+        do {
+            let cd = try context.fetch(req).first
+            completion(.success(cd.flatMap { $0.toEntity() }))
+        } catch {
+            completion(.failure(error))
+        }
+    }
+}
+
+// MARK: - Mapper
+private extension UserCD {
+    func toEntity() -> UserEntity? {
+        guard
+            let id = id,
+            let username = username,
+            let firstName = firstName,
+            let lastName = lastName,
+            let email = email,
+            let dob = dateOfBirth
+        else { return nil }
+        return UserEntity(id: id, username: username, firstName: firstName, lastName: lastName, email: email, dateOfBirth: dob)
     }
 }
