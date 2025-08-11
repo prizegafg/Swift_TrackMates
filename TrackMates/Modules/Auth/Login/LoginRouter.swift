@@ -14,27 +14,32 @@ protocol LoginRouterProtocol {
 
 final class LoginRouter: LoginRouterProtocol {
     func navigateToHome(from view: UIViewController, user: UserEntity) {
-        // Buat HomeViewController dengan user, lalu push atau present
-        // Contoh:
-        // let homeVC = HomeViewController(user: user)
-        // view.navigationController?.setViewControllers([homeVC], animated: true)
+        SessionManager.shared.didLogin()
     }
 
     func navigateToRegister(from view: UIViewController) {
-        // let registerVC = RegisterViewController()
-        // view.present(registerVC, animated: true)
+        let registerVC = RegisterRouter.makeModule()
+        if let nav = view.navigationController {
+            nav.pushViewController(registerVC, animated: true)
+        } else {
+            view.present(UINavigationController(rootViewController: registerVC), animated: true)
+        }
     }
 }
 
 extension LoginRouter {
     static func makeModule() -> UIViewController {
         let interactor = LoginInteractor()
-        let presenter = LoginPresenter(interactor: interactor)
+        let router = LoginRouter()
+        let presenter = LoginPresenter(interactor: interactor, router: router) 
+
         let view = Login()
         view.presenter = presenter
+        
         let nav = UINavigationController(rootViewController: view)
         nav.navigationBar.isTranslucent = false
         nav.navigationBar.prefersLargeTitles = false
         return nav
     }
 }
+

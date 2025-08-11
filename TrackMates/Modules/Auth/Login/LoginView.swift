@@ -67,12 +67,14 @@ final class Login: UIViewController {
         btn.translatesAutoresizingMaskIntoConstraints = false
         return btn
     }()
+    
+    private let activity = UIActivityIndicatorView(style: .medium)
 
     // MARK: Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
         if presenter == nil {
-            presenter = LoginPresenter(interactor: LoginInteractor())
+            presenter = LoginPresenter(interactor: LoginInteractor(), router: LoginRouter())
         }
         setupBackground()
         setupUI()
@@ -80,6 +82,25 @@ final class Login: UIViewController {
         setupBinding()
         setupActions()
         setupKeyboardDismiss()
+        
+        presenter.attach(view: self)
+    }
+}
+
+// MARK: - LoginViewProtocol
+extension Login: LoginViewProtocol {
+    var vc: UIViewController { self }
+
+    func setLoading(_ loading: Bool) {
+        if loading { activity.startAnimating() } else { activity.stopAnimating() }
+        view.isUserInteractionEnabled = !loading
+        loginButton.alpha = loading ? 0.7 : 1
+    }
+
+    func showAlert(title: String, message: String) {
+        let a = UIAlertController(title: title, message: message, preferredStyle: .alert)
+        a.addAction(UIAlertAction(title: "OK", style: .default))
+        present(a, animated: true)
     }
 }
 
@@ -213,18 +234,14 @@ private extension Login {
     func setupBinding() {
         presenter.loginResultPublisher
             .receive(on: RunLoop.main)
-            .sink { [weak self] user in
-                guard let _ = user else { return }
-                // TODO: navigate to Home via Router kalau sudah di-wire
-            }
+            .sink { _ in  }
             .store(in: &cancellables)
-
+        
         presenter.errorPublisher
             .receive(on: RunLoop.main)
-            .sink { [weak self] error in
-                guard let error = error else { return }
-                // TODO: tampilkan alert/toast
-                print("Login error:", error)
+            .sink { [weak self] _ in
+                
+                self?.passwordField.becomeFirstResponder()
             }
             .store(in: &cancellables)
     }
@@ -238,18 +255,14 @@ private extension Login {
     }
 
     @objc func loginButtonTapped() {
-        presenter.login(
+        presenter.onTapLogin(
             email: (emailField.text ?? "").trimmed,
             password: (passwordField.text ?? "")
         )
     }
 
     @objc func registerButtonTapped() {
-        // Idealnya lewat Router: LoginRouter.navigateToRegister(from: self)
-        // Disini tinggal panggil via Presenter kalau kamu expose methodnya,
-        // atau nanti di-wire oleh Router.
-        // Contoh no-op sementara:
-        print("Register tapped")
+        presenter.onTapRegister()
     }
 }
 

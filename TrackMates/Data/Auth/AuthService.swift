@@ -10,6 +10,7 @@ import FirebaseAuth
 
 protocol AuthServiceProtocol {
     func signIn(email: String, password: String, completion: @escaping (Result<String, Error>) -> Void)
+    func signUp(email: String, password: String, completion: @escaping (Result<String, Error>) -> Void)
     func signOut() throws
     func currentUserId() -> String?
 }
@@ -21,6 +22,18 @@ final class AuthService: AuthServiceProtocol {
             guard let uid = result?.user.uid else {
                 completion(.failure(NSError(domain: "Auth", code: -1,
                     userInfo: [NSLocalizedDescriptionKey: "No user found."])))
+                return
+            }
+            completion(.success(uid))
+        }
+    }
+    
+    func signUp(email: String, password: String, completion: @escaping (Result<String, Error>) -> Void) {
+        Auth.auth().createUser(withEmail: email, password: password) { result, error in
+            if let error = error { completion(.failure(error)); return }
+            guard let uid = result?.user.uid else {
+                completion(.failure(NSError(domain: "Auth", code: -1,
+                                            userInfo: [NSLocalizedDescriptionKey: "No user found."])))
                 return
             }
             completion(.success(uid))

@@ -13,46 +13,44 @@ protocol RegisterInteractorProtocol {
 }
 
 final class RegisterInteractor: RegisterInteractorProtocol {
+    private let authService: AuthServiceProtocol
     private let userService: UserServiceProtocol
     private let userRepository: UserRepositoryProtocol
-
-    init(userService: UserServiceProtocol = UserService(),
+    
+    init(authService: AuthServiceProtocol = AuthService(),  
+         userService: UserServiceProtocol = UserService(),
          userRepository: UserRepositoryProtocol = UserRepository()) {
+        self.authService = authService
         self.userService = userService
         self.userRepository = userRepository
     }
-
+    
     func register(_ model: UserRegisterModel, completion: @escaping (Result<UserEntity, Error>) -> Void) {
         guard let password = model.password, !password.isEmpty else {
             completion(.failure(NSError(domain: "Register", code: -3,
-                userInfo: [NSLocalizedDescriptionKey: "Password is required."])))
+                                        userInfo: [NSLocalizedDescriptionKey: "Password is required."])))
             return
         }
-
-        Auth.auth().createUser(withEmail: model.email, password: password) { [weak self] authResult, error in
-            if let error = error {
-                completion(.failure(error))
-                return
-            }
-            guard let uid = authResult?.user.uid else {
-                completion(.failure(NSError(domain: "Auth", code: -1,
-                    userInfo: [NSLocalizedDescriptionKey: "No user found."])))
-                return
-            }
-
-            let entity = model.toEntity(id: uid)
-
-            self?.userService.saveUser(user: entity) { serviceResult in
-                switch serviceResult {
-                case .success:
-                    self?.userRepository.replaceLocal(entity) { repoResult in
-                        switch repoResult {
-                        case .success: completion(.success(entity))
-                        case .failure(let repoError): completion(.failure(repoError))
+        
+        authService.signUp(email: model.email, password: password) { [weak self] result in
+            guard let self = self else { return }
+            switch result {
+            case .failure(let err):
+                completion(.failure(err))
+            case .success(let uid):
+                let entity = model.toEntity(id: uid)
+                self.userService.saveUser(user: entity) { serviceResult in
+                    switch serviceResult {
+                    case .success:
+                        self.userRepository.replaceLocal(entity) { repoResult in
+                            switch repoResult {
+                            case .success: completion(.success(entity))
+                            case .failure(let repoErr): completion(.failure(repoErr))
+                            }
                         }
+                    case .failure(let serviceErr):
+                        completion(.failure(serviceErr))
                     }
-                case .failure(let serviceError):
-                    completion(.failure(serviceError))
                 }
             }
         }

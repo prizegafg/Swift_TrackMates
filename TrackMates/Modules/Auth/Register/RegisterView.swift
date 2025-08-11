@@ -8,26 +8,30 @@
 import UIKit
 import Combine
 
-// MARK: - RegisterView
 final class RegisterView: UIViewController {
     var presenter: RegisterPresenterProtocol!
     private var cancellables = Set<AnyCancellable>()
 
-    // MARK: UI Elements
     let scrollView = UIScrollView()
     let contentView = UIView()
     let cardView = UIView()
     let titleLabel = UILabel()
     let subtitleLabel = UILabel()
-
     let usernameField = RegisterView.makeField(placeholder: "Username")
     let emailField = RegisterView.makeField(placeholder: "Email", keyboard: .emailAddress)
     let dobField = RegisterView.makeField(placeholder: "Date of Birth")
     let passwordField = RegisterView.makeField(placeholder: "Password", secure: true)
     let repeatPasswordField = RegisterView.makeField(placeholder: "Repeat Password", secure: true)
     let registerButton = UIButton(type: .system)
-
-    // DatePicker
+    private let loginLinkButton: UIButton = {
+        let btn = UIButton(type: .system)
+        btn.setTitle("Already Have Account? Login", for: .normal)
+        btn.setTitleColor(.systemGreen, for: .normal)
+        btn.backgroundColor = .clear
+        btn.titleLabel?.font = .systemFont(ofSize: 14, weight: .medium)
+        btn.translatesAutoresizingMaskIntoConstraints = false
+        return btn
+    }()
     let dobPicker: UIDatePicker = {
         let dp = UIDatePicker()
         dp.datePickerMode = .date
@@ -36,6 +40,8 @@ final class RegisterView: UIViewController {
         return dp
     }()
 
+    private let activity = UIActivityIndicatorView(style: .medium)
+
     override func viewDidLoad() {
         super.viewDidLoad()
         setupUI()
@@ -43,10 +49,27 @@ final class RegisterView: UIViewController {
         setupDOBPicker()
         setupBinding()
         setupActions()
+        if let v = self as? RegisterViewProtocol { /* no-op, just for clarity */ }
+        presenter.attach(view: self)
     }
 }
 
-// MARK: - UI Factory
+extension RegisterView: RegisterViewProtocol {
+    var vc: UIViewController { self }
+
+    func showAlert(title: String, message: String, onOK: @escaping () -> Void) {
+        let a = UIAlertController(title: title, message: message, preferredStyle: .alert)
+        a.addAction(UIAlertAction(title: "OK", style: .default) { _ in onOK() })
+        present(a, animated: true)
+    }
+
+    func setLoading(_ loading: Bool) {
+        loading ? activity.startAnimating() : activity.stopAnimating()
+        registerButton.isEnabled = !loading
+        loginLinkButton.isEnabled = !loading
+    }
+}
+
 private extension RegisterView {
     static func makeField(placeholder: String, keyboard: UIKeyboardType = .default, secure: Bool = false) -> UITextField {
         let tf = UITextField()
@@ -64,10 +87,8 @@ private extension RegisterView {
 
     func setupUI() {
         view.backgroundColor = UIColor(red: 0.09, green: 0.11, blue: 0.18, alpha: 1)
-
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         contentView.translatesAutoresizingMaskIntoConstraints = false
-
         cardView.translatesAutoresizingMaskIntoConstraints = false
         cardView.backgroundColor = .white
         cardView.layer.cornerRadius = 24
@@ -97,21 +118,18 @@ private extension RegisterView {
         registerButton.layer.cornerRadius = 12
         registerButton.heightAnchor.constraint(equalToConstant: 48).isActive = true
 
+        activity.translatesAutoresizingMaskIntoConstraints = false
+        activity.hidesWhenStopped = true
+
         view.addSubview(scrollView)
         scrollView.addSubview(contentView)
         contentView.addSubview(cardView)
-
-        [titleLabel, subtitleLabel, usernameField, emailField, dobField, passwordField, repeatPasswordField, registerButton].forEach {
-            cardView.addSubview($0)
-        }
+        [titleLabel, subtitleLabel, usernameField, emailField, dobField, passwordField, repeatPasswordField, registerButton, loginLinkButton, activity]
+            .forEach { cardView.addSubview($0) }
     }
-}
 
-// MARK: - Layout
-private extension RegisterView {
     func setupLayout() {
         NSLayoutConstraint.activate([
-            // scroll & content
             scrollView.topAnchor.constraint(equalTo: view.topAnchor),
             scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
             scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
@@ -123,13 +141,11 @@ private extension RegisterView {
             contentView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
             contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor),
 
-            // card
             cardView.topAnchor.constraint(equalTo: contentView.safeAreaLayoutGuide.topAnchor, constant: 44),
             cardView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 28),
             cardView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -28),
-            cardView.bottomAnchor.constraint(equalTo: registerButton.bottomAnchor, constant: 36),
+            cardView.bottomAnchor.constraint(equalTo: loginLinkButton.bottomAnchor, constant: 36),
 
-            // title + subtitle
             titleLabel.topAnchor.constraint(equalTo: cardView.topAnchor, constant: 36),
             titleLabel.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 22),
             titleLabel.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -22),
@@ -138,7 +154,6 @@ private extension RegisterView {
             subtitleLabel.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 18),
             subtitleLabel.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -18),
 
-            // fields
             usernameField.topAnchor.constraint(equalTo: subtitleLabel.bottomAnchor, constant: 32),
             usernameField.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 18),
             usernameField.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -18),
@@ -167,16 +182,17 @@ private extension RegisterView {
             registerButton.topAnchor.constraint(equalTo: repeatPasswordField.bottomAnchor, constant: 26),
             registerButton.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 18),
             registerButton.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -18),
-            registerButton.heightAnchor.constraint(equalToConstant: 48)
+
+            loginLinkButton.topAnchor.constraint(equalTo: registerButton.bottomAnchor, constant: 12),
+            loginLinkButton.centerXAnchor.constraint(equalTo: cardView.centerXAnchor),
+
+            activity.centerXAnchor.constraint(equalTo: registerButton.centerXAnchor),
+            activity.centerYAnchor.constraint(equalTo: registerButton.centerYAnchor)
         ])
     }
-}
 
-// MARK: - DOB Picker
-private extension RegisterView {
     func setupDOBPicker() {
         dobField.inputView = dobPicker
-
         let toolbar = UIToolbar()
         toolbar.sizeToFit()
         let doneBtn = UIBarButtonItem(barButtonSystemItem: .done, target: self, action: #selector(didSelectDOB))
@@ -191,60 +207,39 @@ private extension RegisterView {
         dobField.text = f.string(from: dobPicker.date)
         dobField.resignFirstResponder()
     }
+    @objc func datePickerTapped() { }
 
-    @objc func datePickerTapped() {
-        // no-op: cukup untuk memunculkan inputView (picker)
-    }
-}
-
-// MARK: - Binding
-private extension RegisterView {
     func setupBinding() {
         presenter.registerResultPublisher
             .receive(on: RunLoop.main)
-            .sink { [weak self] user in
-                guard let _ = user else { return }
-                // TODO: navigate via Router
-            }
+            .sink { _ in /* UI reaction handled by presenter via showAlert */ }
             .store(in: &cancellables)
 
         presenter.errorPublisher
             .receive(on: RunLoop.main)
-            .sink { [weak self] error in
-                guard let error = error else { return }
-                // TODO: tampilkan alert/toast
-                print("Register error:", error)
+            .sink { [weak self] err in
+                guard let err, let self else { return }
+                self.showAlert(title: "Registration Failed", message: err, onOK: {})
             }
             .store(in: &cancellables)
     }
-}
 
-// MARK: - Actions
-private extension RegisterView {
     func setupActions() {
         registerButton.addTarget(self, action: #selector(didTapRegister), for: .touchUpInside)
+        loginLinkButton.addTarget(self, action: #selector(didTapLoginLink), for: .touchUpInside)
     }
 
     @objc func didTapRegister() {
-        guard passwordsMatch() else {
-            // TODO: show toast "Password and Repeat Password do not match"
-            return
-        }
-
-        let model = UserRegisterModel(
-            username: (usernameField.text ?? "").trimmed,
-            email: (emailField.text ?? "").trimmed,
-            firstName: "",
-            lastName: "",
+        presenter.onTapRegister(
+            username: (usernameField.text ?? ""),
+            email: (emailField.text ?? ""),
             dob: dobPicker.date,
-            password: (passwordField.text ?? "").nilIfEmpty
+            password: (passwordField.text ?? ""),
+            repeatPassword: (repeatPasswordField.text ?? "")
         )
-
-        presenter.register(model)
     }
 
-    func passwordsMatch() -> Bool {
-        (passwordField.text ?? "") == (repeatPasswordField.text ?? "")
+    @objc func didTapLoginLink() {
+        presenter.onTapLoginLink()
     }
 }
-
