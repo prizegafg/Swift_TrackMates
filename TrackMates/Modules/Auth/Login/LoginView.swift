@@ -9,7 +9,7 @@ import UIKit
 import Combine
 
 // MARK: - Login (View)
-final class Login: UIViewController {
+final class LoginView: UIViewController {
     var presenter: LoginPresenterProtocol!
     private var cancellables = Set<AnyCancellable>()
 
@@ -55,10 +55,11 @@ final class Login: UIViewController {
         return lbl
     }()
 
-    let emailField = Login.makeField(placeholder: "Email", keyboard: .emailAddress)
-    let passwordField = Login.makeField(placeholder: "Password", secure: true)
+    let emailField = LoginView.makeField(placeholder: "Email", keyboard: .emailAddress)
+    let passwordField = LoginView.makeField(placeholder: "Password", secure: true)
+    private lazy var showLoginPassBtn: UIButton = LoginView.makeEyeButton()
 
-    let loginButton = Login.makeButton(title: "Sign In")
+    let loginButton = LoginView.makeButton(title: "Sign In")
     let registerButton: UIButton = {
         let btn = UIButton(type: .system)
         btn.setTitle("Create New Account", for: .normal)
@@ -88,7 +89,7 @@ final class Login: UIViewController {
 }
 
 // MARK: - LoginViewProtocol
-extension Login: LoginViewProtocol {
+extension LoginView: LoginViewProtocol {
     var vc: UIViewController { self }
 
     func setLoading(_ loading: Bool) {
@@ -105,7 +106,7 @@ extension Login: LoginViewProtocol {
 }
 
 // MARK: - UI Factory
-private extension Login {
+private extension LoginView {
     static func makeField(placeholder: String, keyboard: UIKeyboardType = .default, secure: Bool = false) -> UITextField {
         let tf = UITextField()
         tf.placeholder = placeholder
@@ -130,10 +131,19 @@ private extension Login {
         btn.heightAnchor.constraint(equalToConstant: 48).isActive = true
         return btn
     }
+    
+    static func makeEyeButton() -> UIButton {
+        let btn = UIButton(type: .system)
+        btn.setImage(UIImage(systemName: "eye.slash"), for: .normal)
+        btn.tintColor = .secondaryLabel
+        btn.frame = CGRect(x: 0, y: 0, width: 44, height: 44)
+        btn.accessibilityLabel = "Show or hide password"
+        return btn
+    }
 }
 
 // MARK: - Background Setup
-private extension Login {
+private extension LoginView {
     func setupBackground() {
         let bg = UIImageView()
         bg.translatesAutoresizingMaskIntoConstraints = false
@@ -141,7 +151,6 @@ private extension Login {
         bg.clipsToBounds = true
         bg.image = UIImage(named: preferredLoginBGName())
 
-        // taruh paling belakang
         view.addSubview(bg)
         view.sendSubviewToBack(bg)
 
@@ -160,7 +169,6 @@ private extension Login {
         case .phone:
             return "loginbg_iphone"
         case .mac:
-            // Mac Catalyst: pakai iPad biar rasio lebih aman
             return "loginbg_ipad"
         default:
             return "loginbg_iphone"
@@ -170,7 +178,7 @@ private extension Login {
 
 
 // MARK: - Setup UI
-private extension Login {
+private extension LoginView {
     func setupUI() {
         view.backgroundColor = .black
         view.addSubview(overlayView)
@@ -178,11 +186,14 @@ private extension Login {
 
         [titleLabel, subtitleLabel, emailField, passwordField, loginButton, registerButton]
             .forEach { cardView.addSubview($0) }
+        passwordField.rightView = showLoginPassBtn
+        passwordField.rightViewMode = .always
+
     }
 }
 
 // MARK: - Layout
-private extension Login {
+private extension LoginView {
     func setupLayout() {
         NSLayoutConstraint.activate([
             // overlay
@@ -230,7 +241,7 @@ private extension Login {
 }
 
 // MARK: - Binding (Combine)
-private extension Login {
+private extension LoginView {
     func setupBinding() {
         presenter.loginResultPublisher
             .receive(on: RunLoop.main)
@@ -248,10 +259,12 @@ private extension Login {
 }
 
 // MARK: - Actions
-private extension Login {
+private extension LoginView {
     func setupActions() {
         loginButton.addTarget(self, action: #selector(loginButtonTapped), for: .touchUpInside)
         registerButton.addTarget(self, action: #selector(registerButtonTapped), for: .touchUpInside)
+        showLoginPassBtn.addTarget(self, action: #selector(toggleLoginPassword), for: .touchUpInside)
+
     }
 
     @objc func loginButtonTapped() {
@@ -264,17 +277,37 @@ private extension Login {
     @objc func registerButtonTapped() {
         presenter.onTapRegister()
     }
+    
+    @objc func toggleLoginPassword() {
+        toggleSecureEntry(passwordField, button: showLoginPassBtn)
+    }
+    
+    @objc func dismissKeyboard() {
+        view.endEditing(true)
+    }
 }
 
 // MARK: - Helpers
-private extension Login {
+private extension LoginView {
     func setupKeyboardDismiss() {
         let tap = UITapGestureRecognizer(target: self, action: #selector(dismissKeyboard))
         tap.cancelsTouchesInView = false
         view.addGestureRecognizer(tap)
     }
+    
+    private func toggleSecureEntry(_ tf: UITextField, button: UIButton) {
+        let wasFirstResponder = tf.isFirstResponder
+        let existingText = tf.text
 
-    @objc func dismissKeyboard() {
-        view.endEditing(true)
+        tf.isSecureTextEntry.toggle()
+        if wasFirstResponder { tf.resignFirstResponder() }
+        tf.text = nil
+        tf.text = existingText
+        if wasFirstResponder { tf.becomeFirstResponder() }
+
+        let img = tf.isSecureTextEntry ? "eye.slash" : "eye"
+        button.setImage(UIImage(systemName: img), for: .normal)
     }
+
+    
 }

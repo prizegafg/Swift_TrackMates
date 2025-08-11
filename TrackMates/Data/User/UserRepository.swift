@@ -16,28 +16,27 @@ protocol UserRepositoryProtocol {
 }
 // MARK: - Write
 final class UserRepository: UserRepositoryProtocol {
+    private let container = (UIApplication.shared.delegate as! AppDelegate).persistentContainer
     private let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
 
     func replaceLocal(_ user: UserEntity, completion: @escaping (Result<Void, Error>) -> Void) {
-        let fetchRequest: NSFetchRequest<UserCD> = UserCD.fetchRequest()
-        fetchRequest.predicate = NSPredicate(format: "id == %@", user.id)
-        do {
-            // Remove existing user if any (replace strategy)
-            let results = try context.fetch(fetchRequest)
-            for existingUser in results {
-                context.delete(existingUser)
+        context.perform { // <-- thread-safe
+            do {
+                let fetch: NSFetchRequest<UserCD> = UserCD.fetchRequest()
+                fetch.predicate = NSPredicate(format: "id == %@", user.id)
+                for existing in try self.context.fetch(fetch) { self.context.delete(existing) }
+                let cd = UserCD(context: self.context)
+                cd.id = user.id
+                cd.username = user.username
+                cd.firstName = user.firstName
+                cd.lastName = user.lastName
+                cd.email = user.email
+                cd.dateOfBirth = user.dateOfBirth
+                try self.context.save()
+                completion(.success(()))
+            } catch {
+                completion(.failure(error))
             }
-            let cdUser = UserCD(context: context)
-            cdUser.id = user.id
-            cdUser.username = user.username
-            cdUser.firstName = user.firstName
-            cdUser.lastName = user.lastName
-            cdUser.email = user.email
-            cdUser.dateOfBirth = user.dateOfBirth
-            try context.save()
-            completion(.success(()))
-        } catch {
-            completion(.failure(error))
         }
     }
 }

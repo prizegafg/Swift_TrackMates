@@ -42,7 +42,6 @@ final class RegisterPresenter: RegisterPresenterProtocol {
     func attach(view: RegisterViewProtocol) { self.view = view }
 
     func onTapRegister(username: String, email: String, dob: Date, password: String, repeatPassword: String) {
-        // 🔐 Semua validasi di Presenter
         guard !email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             errorSubject.send("Email is required.")
             return
@@ -71,7 +70,7 @@ final class RegisterPresenter: RegisterPresenterProtocol {
             self.view?.setLoading(false)
             switch result {
             case .success(let user):
-                self.registerResultSubject.send(user)
+                self.interactor.onSuccess()
                 self.view?.showAlert(title: "Registration Successful",
                                      message: "Please sign in to continue.") { [weak self] in
                     guard let self, let vc = self.view?.vc else { return }
@@ -85,6 +84,7 @@ final class RegisterPresenter: RegisterPresenterProtocol {
 
     func onTapLoginLink() {
         guard let vc = view?.vc else { return }
+        print("To Login Tapped")
         router.navigateToLogin(from: vc)
     }
 }

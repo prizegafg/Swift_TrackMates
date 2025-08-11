@@ -59,17 +59,19 @@ final class LoginPresenter: LoginPresenterProtocol {
         view?.setLoading(true)
         interactor.login(email: e, password: password) { [weak self] result in
             guard let self else { return }
-            self.view?.setLoading(false)
-            switch result {
-            case .success(let user):
-                self.loginResultSubject.send(user)
-                if let vc = self.view?.vc {
-                    self.router.navigateToHome(from: vc, user: user)
+            DispatchQueue.main.async {
+                self.view?.setLoading(false)
+                switch result {
+                case .success(let user):
+                    self.loginResultSubject.send(user)
+                    if let vc = self.view?.vc {
+                        self.router.navigateToHome(from: vc, user: user)
+                    }
+                case .failure(let err):
+                    let message = self.errorMsg(err)                
+                    self.errorSubject.send(message)
+                    self.view?.showAlert(title: "Login Failed", message: message)
                 }
-            case .failure(let err):
-                let message = self.errorMsg(err)                
-                self.errorSubject.send(message)
-                self.view?.showAlert(title: "Login Failed", message: message)
             }
         }
     }

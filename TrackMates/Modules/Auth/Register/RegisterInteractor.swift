@@ -10,6 +10,7 @@ import FirebaseAuth
 
 protocol RegisterInteractorProtocol {
     func register(_ model: UserRegisterModel, completion: @escaping (Result<UserEntity, Error>) -> Void)
+    func onSuccess()
 }
 
 final class RegisterInteractor: RegisterInteractorProtocol {
@@ -54,5 +55,9 @@ final class RegisterInteractor: RegisterInteractorProtocol {
                 }
             }
         }
+    }
+    
+    func onSuccess() {
+        try? authService.signOut()
     }
 }

@@ -8,22 +8,36 @@
 import UIKit
 
 protocol RegisterRouterProtocol {
-    func navigateToHome(from view: UIViewController, user: UserEntity)
     func navigateToLogin(from view: UIViewController)
 }
 
 final class RegisterRouter: RegisterRouterProtocol {
     func navigateToLogin(from view: UIViewController) {
         if let nav = view.navigationController {
-            nav.popViewController(animated: true)
-        } else {
-            let login = LoginRouter.makeModule()
-            guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                  let window = windowScene.windows.first else { return }
-            window.setRoot(login, animated: true)
+            if let loginVC = nav.viewControllers.first(where: { $0 is LoginView }) {
+                nav.popToViewController(loginVC, animated: true)
+                return
+            }
+            if nav.viewControllers.count <= 1 {
+                if nav.presentingViewController != nil {
+                    nav.dismiss(animated: true)
+                    return
+                } else {
+                    resetRootToLogin()
+                    return
+                }
+            }
+            _ = nav.popViewController(animated: true)
+            return
         }
+        resetRootToLogin()
     }
-    func navigateToHome(from view: UIViewController, user: UserEntity) { }
+    private func resetRootToLogin() {
+        let login = LoginRouter.makeModule()
+        guard let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let win = ws.windows.first else { return }
+        win.setRoot(login, animated: true)
+    }
 }
 
 extension RegisterRouter {

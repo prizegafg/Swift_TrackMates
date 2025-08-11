@@ -20,9 +20,13 @@ final class LoginRouter: LoginRouterProtocol {
     func navigateToRegister(from view: UIViewController) {
         let registerVC = RegisterRouter.makeModule()
         if let nav = view.navigationController {
+            nav.setNavigationBarHidden(true, animated: false)
             nav.pushViewController(registerVC, animated: true)
         } else {
-            view.present(UINavigationController(rootViewController: registerVC), animated: true)
+            let nav = UINavigationController(rootViewController: registerVC)
+            nav.setNavigationBarHidden(true, animated: false) // ✅ hidden
+            nav.modalPresentationStyle = .fullScreen
+            view.present(nav, animated: true)
         }
     }
 }
@@ -33,12 +37,12 @@ extension LoginRouter {
         let router = LoginRouter()
         let presenter = LoginPresenter(interactor: interactor, router: router) 
 
-        let view = Login()
+        let view = LoginView()
         view.presenter = presenter
         
         let nav = UINavigationController(rootViewController: view)
-        nav.navigationBar.isTranslucent = false
-        nav.navigationBar.prefersLargeTitles = false
+        nav.setNavigationBarHidden(true, animated: false)
+        nav.modalPresentationStyle = .fullScreen
         return nav
     }
 }
