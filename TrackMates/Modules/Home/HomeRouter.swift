@@ -16,7 +16,7 @@ final class HomeRouter: HomeRouterProtocol {
         let login = LoginRouter.makeModule()
         guard let ws = UIApplication.shared.connectedScenes.first as? UIWindowScene,
               let win = ws.windows.first else { return }
-        win.setRoot(login, animated: true) // pakai helper yang sudah ada
+        win.setRoot(login, animated: true)
     }
 }
 
@@ -30,6 +30,7 @@ extension HomeRouter {
         presenter.attach(view: view)
 
         let nav = UINavigationController(rootViewController: view)
+        nav.setNavigationBarHidden(true, animated: false) 
         return nav
     }
 }

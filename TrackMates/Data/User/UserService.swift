@@ -28,12 +28,20 @@ final class UserService: UserServiceProtocol {
                   let lastName = data["lastName"] as? String,
                   let email = data["email"] as? String,
                   let dobString = data["dateOfBirth"] as? String,
-                  let dob = ISO8601DateFormatter().date(from: dobString)
+                  let dob = ISO8601DateFormatter().date(from: dobString),
+                  let bio = data["bio"] as? String
             else {
                 completion(.failure(NSError(domain: "Firestore", code: -2, userInfo: [NSLocalizedDescriptionKey: "User data incomplete."])))
                 return
             }
-            let userEntity = UserEntity(id: userId, username: username, firstName: firstName, lastName: lastName, email: email, dateOfBirth: dob)
+            let userEntity = UserEntity(
+                id: userId,
+                username: username,
+                firstName: firstName,
+                lastName: lastName,
+                email: email,
+                dateOfBirth: dob,
+                bio: bio)
             completion(.success(userEntity))
         }
     }
@@ -45,7 +53,8 @@ final class UserService: UserServiceProtocol {
             "firstName": user.firstName,
             "lastName": user.lastName,
             "email": user.email,
-            "dateOfBirth": ISO8601DateFormatter().string(from: user.dateOfBirth)
+            "dateOfBirth": ISO8601DateFormatter().string(from: user.dateOfBirth),
+            "bio" : user.bio ?? ""
            ]
            db.collection("users").document(user.id).setData(userData) { error in
                if let error = error {

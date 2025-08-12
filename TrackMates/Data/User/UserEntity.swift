@@ -14,13 +14,23 @@ struct UserEntity: Codable, Identifiable {
     let lastName: String
     let email: String
     let dateOfBirth: Date
+    let bio: String?
 
-    init(id: String, username: String, firstName: String, lastName: String, email: String, dateOfBirth: Date) {
+    init(
+        id: String,
+        username: String,
+        firstName: String,
+        lastName: String,
+        email: String,
+        dateOfBirth: Date,
+        bio: String? = nil
+    ) {
         self.id = id
         self.username = username
         self.firstName = firstName
         self.lastName = lastName
         self.email = email
         self.dateOfBirth = dateOfBirth
+        self.bio = bio
     }
 }
