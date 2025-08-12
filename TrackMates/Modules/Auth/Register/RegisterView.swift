@@ -8,17 +8,37 @@
 import UIKit
 import Combine
 
+// MARK: - RegisterView
 final class RegisterView: UIViewController {
     var presenter: RegisterPresenterProtocol!
     private var cancellables = Set<AnyCancellable>()
 
-    // MARK: UI
-    private let scrollView = UIScrollView()
+    // MARK: UI Metrics
+    private enum UI {
+        static let cardTop: CGFloat   = 44
+        static let cardSide: CGFloat  = 28
+        static let hInset: CGFloat    = 18
+        static let vTitle: CGFloat    = 32
+        static let vBig: CGFloat      = 28
+        static let v: CGFloat         = 14
+        static let vBottom: CGFloat   = 18
+        static let vBtnTop: CGFloat   = 22
+    }
+
+    // MARK: Views
+    private let scrollView: UIScrollView = {
+        let sv = UIScrollView()
+        sv.translatesAutoresizingMaskIntoConstraints = false
+        sv.alwaysBounceVertical = true
+        sv.delaysContentTouches = false
+        sv.keyboardDismissMode = .interactive
+        return sv
+    }()
     private let contentView = UIView()
 
     private let cardView: UIView = {
         let v = UIView()
-        v.backgroundColor = UIColor.white.withAlphaComponent(0.95) // seragam dengan login card feel
+        v.backgroundColor = UIColor.white.withAlphaComponent(0.95)
         v.layer.cornerRadius = 24
         v.layer.masksToBounds = false
         v.layer.shadowColor = UIColor.black.cgColor
@@ -33,7 +53,7 @@ final class RegisterView: UIViewController {
         let lbl = UILabel()
         lbl.text = "Registration"
         lbl.font = .systemFont(ofSize: 24, weight: .bold)
-        lbl.textColor = .black
+        lbl.textColor = .tmLabelPrimary
         lbl.textAlignment = .center
         lbl.translatesAutoresizingMaskIntoConstraints = false
         return lbl
@@ -43,28 +63,36 @@ final class RegisterView: UIViewController {
         let lbl = UILabel()
         lbl.text = "Create your Track Mates account to start your run or ride."
         lbl.font = .systemFont(ofSize: 14, weight: .regular)
-        lbl.textColor = .darkGray
+        lbl.textColor = .tmLabelSecondary
         lbl.textAlignment = .center
         lbl.numberOfLines = 0
         lbl.translatesAutoresizingMaskIntoConstraints = false
         return lbl
     }()
 
-    private let usernameField = RegisterView.makeField(placeholder: "Username")
-    private let emailField    = RegisterView.makeField(placeholder: "Email", keyboard: .emailAddress)
-    private let dobField      = RegisterView.makeField(placeholder: "Date of Birth")
-    private let passwordField = RegisterView.makeField(placeholder: "Password", secure: true)
-    private let repeatPasswordField = RegisterView.makeField(placeholder: "Repeat Password", secure: true)
-    private lazy var showPassBtn: UIButton = RegisterView.makeEyeButton()
-    private lazy var showRepeatPassBtn: UIButton = RegisterView.makeEyeButton()
+    // Fields 
+    private let usernameField        = DesignTextField.field("Username")
+    private let emailField           = DesignTextField.field("Email", keyboard: .emailAddress)
+    private let dobField             = DesignTextField.field("Date of Birth")
+    private let passwordField        = DesignTextField.secure("Password")
+    private let repeatPasswordField  = DesignTextField.secure("Repeat Password")
 
+    // Toggle eye buttons
+    private var showPassBtn: UIButton!
+    private var showRepeatPassBtn: UIButton!
 
-    private let registerButton = RegisterView.makeButton(title: "Registration")
-    private let loginLinkButton = RegisterView.makeLinkButton("Already Have Account? Login")
+    // Buttons
+    private let registerButton = DesignButton.primary("Registration")
+    private let loginLinkButton = DesignButton.link("Already Have Account? Login")
 
-    private let activity = UIActivityIndicatorView(style: .medium)
+    private let activity: UIActivityIndicatorView = {
+        let a = UIActivityIndicatorView(style: .medium)
+        a.translatesAutoresizingMaskIntoConstraints = false
+        a.hidesWhenStopped = true
+        return a
+    }()
 
-    // Date Picker
+    // Date picker
     private let dobPicker: UIDatePicker = {
         let dp = UIDatePicker()
         dp.datePickerMode = .date
@@ -72,16 +100,21 @@ final class RegisterView: UIViewController {
         if #available(iOS 13.4, *) { dp.preferredDatePickerStyle = .wheels }
         return dp
     }()
+    private lazy var dobFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateStyle = .medium
+        return f
+    }()
 
     // MARK: Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
-        setupUI()
-        setupLayout()
+        buildUI()
+        layoutUI()
         setupDOBPicker()
-        setupBinding()
-        setupActions()
-        setupKeyboardDismiss()
+        bindPresenter()
+        bindActions()
+        enableKeyboardDismiss()
         presenter.attach(view: self)
     }
 }
@@ -97,159 +130,100 @@ extension RegisterView: RegisterViewProtocol {
     }
 
     func setLoading(_ loading: Bool) {
-        if loading { activity.startAnimating() } else { activity.stopAnimating() }
-        view.isUserInteractionEnabled = !loading // samakan pola dengan Login
+        loading ? activity.startAnimating() : activity.stopAnimating()
+        view.isUserInteractionEnabled = !loading
         registerButton.alpha = loading ? 0.7 : 1
         loginLinkButton.alpha = loading ? 0.7 : 1
     }
 }
 
-// MARK: - UI Builders
+// MARK: - UI setup
 private extension RegisterView {
-    // Bisa dibuat reusable
-    static func makeField(placeholder: String, keyboard: UIKeyboardType = .default, secure: Bool = false) -> UITextField {
-        let tf = UITextField()
-        tf.placeholder = placeholder
-        tf.autocapitalizationType = .none
-        tf.keyboardType = keyboard
-        tf.isSecureTextEntry = secure
-        tf.borderStyle = .roundedRect
-        tf.backgroundColor = UIColor(white: 0.97, alpha: 1)
-        tf.translatesAutoresizingMaskIntoConstraints = false
-        tf.heightAnchor.constraint(equalToConstant: 44).isActive = true
-        return tf
-    }
-
-    static func makeButton(title: String) -> UIButton {
-        let btn = UIButton(type: .system)
-        btn.setTitle(title, for: .normal)
-        btn.backgroundColor = .systemGreen
-        btn.setTitleColor(.white, for: .normal)
-        btn.titleLabel?.font = .boldSystemFont(ofSize: 16)
-        btn.layer.cornerRadius = 12
-        btn.translatesAutoresizingMaskIntoConstraints = false
-        btn.heightAnchor.constraint(equalToConstant: 48).isActive = true
-        return btn
-    }
-
-    static func makeLinkButton(_ title: String) -> UIButton {
-        let btn = UIButton(type: .system)
-        btn.setTitle(title, for: .normal)
-        btn.setTitleColor(.systemGreen, for: .normal)
-        btn.titleLabel?.font = .systemFont(ofSize: 14, weight: .medium)
-        btn.contentEdgeInsets = UIEdgeInsets(top: 8, left: 12, bottom: 8, right: 12)
-        btn.translatesAutoresizingMaskIntoConstraints = false
-        return btn
-    }
-    
-    static func makeEyeButton() -> UIButton {
-        let btn = UIButton(type: .system)
-        btn.setImage(UIImage(systemName: "eye.slash"), for: .normal)
-        btn.tintColor = .secondaryLabel
-        btn.frame = CGRect(x: 0, y: 0, width: 44, height: 44) // rightView pakai frame
-        btn.accessibilityLabel = "Show or hide password"
-        return btn
-    }
-}
-
-// MARK: - Setup
-private extension RegisterView {
-    func setupUI() {
+    func buildUI() {
         view.backgroundColor = .systemBackground
 
         scrollView.translatesAutoresizingMaskIntoConstraints = false
-        scrollView.alwaysBounceVertical = true
-        scrollView.delaysContentTouches = false
-        scrollView.keyboardDismissMode = .interactive
-
         contentView.translatesAutoresizingMaskIntoConstraints = false
-
-        activity.translatesAutoresizingMaskIntoConstraints = false
-        activity.hidesWhenStopped = true
 
         view.addSubview(scrollView)
         scrollView.addSubview(contentView)
-
         contentView.addSubview(cardView)
+
         [titleLabel, subtitleLabel,
          usernameField, emailField, dobField,
          passwordField, repeatPasswordField,
          registerButton, loginLinkButton, activity]
             .forEach { cardView.addSubview($0) }
-        
-        passwordField.rightView = showPassBtn
-        passwordField.rightViewMode = .always
 
-        repeatPasswordField.rightView = showRepeatPassBtn
-        repeatPasswordField.rightViewMode = .always
-
+        // Eye toggles via reusable helper
+        showPassBtn = DesignTextField.addEyeToggle(to: passwordField)
+        showRepeatPassBtn = DesignTextField.addEyeToggle(to: repeatPasswordField)
     }
 
-    func setupLayout() {
+    func layoutUI() {
         NSLayoutConstraint.activate([
-            // ScrollView full screen
+            // scroll container
             scrollView.topAnchor.constraint(equalTo: view.topAnchor),
             scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
             scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
 
-            // Content guides
             contentView.topAnchor.constraint(equalTo: scrollView.contentLayoutGuide.topAnchor),
             contentView.bottomAnchor.constraint(equalTo: scrollView.contentLayoutGuide.bottomAnchor),
             contentView.leadingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.leadingAnchor),
             contentView.trailingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.trailingAnchor),
             contentView.widthAnchor.constraint(equalTo: scrollView.frameLayoutGuide.widthAnchor),
 
-            // Card
-            cardView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 44),
-            cardView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 28),
-            cardView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -28),
+            // card
+            cardView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: UI.cardTop),
+            cardView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: UI.cardSide),
+            cardView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -UI.cardSide),
 
-            // Title & subtitle
-            titleLabel.topAnchor.constraint(equalTo: cardView.topAnchor, constant: 32),
-            titleLabel.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 18),
-            titleLabel.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -18),
+            // title & subtitle
+            titleLabel.topAnchor.constraint(equalTo: cardView.topAnchor, constant: UI.vTitle),
+            titleLabel.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: UI.hInset),
+            titleLabel.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -UI.hInset),
 
             subtitleLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 8),
-            subtitleLabel.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 18),
-            subtitleLabel.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -18),
+            subtitleLabel.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: UI.hInset),
+            subtitleLabel.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -UI.hInset),
 
-            // Fields
-            usernameField.topAnchor.constraint(equalTo: subtitleLabel.bottomAnchor, constant: 28),
-            usernameField.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 18),
-            usernameField.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -18),
+            // fields
+            usernameField.topAnchor.constraint(equalTo: subtitleLabel.bottomAnchor, constant: UI.vBig),
+            usernameField.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: UI.hInset),
+            usernameField.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -UI.hInset),
 
-            emailField.topAnchor.constraint(equalTo: usernameField.bottomAnchor, constant: 14),
-            emailField.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 18),
-            emailField.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -18),
+            emailField.topAnchor.constraint(equalTo: usernameField.bottomAnchor, constant: UI.v),
+            emailField.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: UI.hInset),
+            emailField.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -UI.hInset),
 
-            dobField.topAnchor.constraint(equalTo: emailField.bottomAnchor, constant: 14),
-            dobField.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 18),
-            dobField.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -18),
+            dobField.topAnchor.constraint(equalTo: emailField.bottomAnchor, constant: UI.v),
+            dobField.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: UI.hInset),
+            dobField.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -UI.hInset),
 
-            passwordField.topAnchor.constraint(equalTo: dobField.bottomAnchor, constant: 14),
-            passwordField.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 18),
-            passwordField.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -18),
+            passwordField.topAnchor.constraint(equalTo: dobField.bottomAnchor, constant: UI.v),
+            passwordField.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: UI.hInset),
+            passwordField.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -UI.hInset),
 
-            repeatPasswordField.topAnchor.constraint(equalTo: passwordField.bottomAnchor, constant: 14),
-            repeatPasswordField.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 18),
-            repeatPasswordField.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -18),
+            repeatPasswordField.topAnchor.constraint(equalTo: passwordField.bottomAnchor, constant: UI.v),
+            repeatPasswordField.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: UI.hInset),
+            repeatPasswordField.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -UI.hInset),
 
-            // Buttons
-            registerButton.topAnchor.constraint(equalTo: repeatPasswordField.bottomAnchor, constant: 22),
-            registerButton.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 18),
-            registerButton.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -18),
+            // buttons
+            registerButton.topAnchor.constraint(equalTo: repeatPasswordField.bottomAnchor, constant: UI.vBtnTop),
+            registerButton.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: UI.hInset),
+            registerButton.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -UI.hInset),
 
             loginLinkButton.topAnchor.constraint(equalTo: registerButton.bottomAnchor, constant: 14),
             loginLinkButton.centerXAnchor.constraint(equalTo: cardView.centerXAnchor),
 
-            // Activity on top of register button
+            // activity
             activity.centerXAnchor.constraint(equalTo: registerButton.centerXAnchor),
             activity.centerYAnchor.constraint(equalTo: registerButton.centerYAnchor),
 
-            // 🔑 Important: close the bottom chain to fix tap/scroll
-            loginLinkButton.bottomAnchor.constraint(equalTo: cardView.bottomAnchor, constant: -18),
-            cardView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -44)
+            // bottom
+            loginLinkButton.bottomAnchor.constraint(equalTo: cardView.bottomAnchor, constant: -UI.vBottom),
+            cardView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -UI.cardTop)
         ])
     }
 
@@ -261,11 +235,14 @@ private extension RegisterView {
         toolbar.items = [doneBtn]
         dobField.inputAccessoryView = toolbar
     }
+}
 
-    func setupBinding() {
+// MARK: - Bindings & Actions
+private extension RegisterView {
+    func bindPresenter() {
         presenter.registerResultPublisher
             .receive(on: RunLoop.main)
-            .sink { _ in /* handled by presenter via showAlert */ }
+            .sink { _ in /* presenter will route via showAlert callback */ }
             .store(in: &cancellables)
 
         presenter.errorPublisher
@@ -277,47 +254,10 @@ private extension RegisterView {
             .store(in: &cancellables)
     }
 
-    func setupActions() {
+    func bindActions() {
         registerButton.addTarget(self, action: #selector(didTapRegister), for: .touchUpInside)
         loginLinkButton.addTarget(self, action: #selector(didTapLoginLink), for: .touchUpInside)
-        showPassBtn.addTarget(self, action: #selector(togglePassword), for: .touchUpInside)
-        showRepeatPassBtn.addTarget(self, action: #selector(toggleRepeatPassword), for: .touchUpInside)
-    }
-
-    func setupKeyboardDismiss() {
-        let tap = UITapGestureRecognizer(target: self, action: #selector(dismissKeyboard))
-        tap.cancelsTouchesInView = false // jangan blokir tap ke field/tombol
-        view.addGestureRecognizer(tap)
-    }
-    
-    private func toggleSecureEntry(_ tf: UITextField, button: UIButton) {
-        let wasFirstResponder = tf.isFirstResponder
-        let existingText = tf.text
-
-        tf.isSecureTextEntry.toggle()
-
-        // Force refresh glyphs agar bullet ↔︎ plain sync
-        if wasFirstResponder {
-            tf.resignFirstResponder()
-        }
-        tf.text = nil
-        tf.text = existingText
-        if wasFirstResponder {
-            tf.becomeFirstResponder()
-        }
-
-        let img = tf.isSecureTextEntry ? "eye.slash" : "eye"
-        button.setImage(UIImage(systemName: img), for: .normal)
-    }
-}
-
-// MARK: - Actions
-private extension RegisterView {
-    @objc func didSelectDOB() {
-        let f = DateFormatter()
-        f.dateStyle = .medium
-        dobField.text = f.string(from: dobPicker.date)
-        dobField.resignFirstResponder()
+        // eye buttons sudah di-handle oleh DesignTextField.addEyeToggle(to:)
     }
 
     @objc func didTapRegister() {
@@ -334,15 +274,20 @@ private extension RegisterView {
         presenter.onTapLoginLink()
     }
 
+    @objc func didSelectDOB() {
+        dobField.text = dobFormatter.string(from: dobPicker.date)
+        dobField.resignFirstResponder()
+    }
+}
+
+// MARK: - Keyboard dismiss
+private extension RegisterView {
+    func enableKeyboardDismiss() {
+        let tap = UITapGestureRecognizer(target: self, action: #selector(dismissKeyboard))
+        tap.cancelsTouchesInView = false
+        view.addGestureRecognizer(tap)
+    }
     @objc func dismissKeyboard() {
         view.endEditing(true)
-    }
-    
-    @objc func togglePassword() {
-        toggleSecureEntry(passwordField, button: showPassBtn)
-    }
-
-    @objc func toggleRepeatPassword() {
-        toggleSecureEntry(repeatPasswordField, button: showRepeatPassBtn)
     }
 }

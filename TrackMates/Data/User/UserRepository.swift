@@ -25,7 +25,7 @@ final class UserRepository: UserRepositoryProtocol {
                 let fetch: NSFetchRequest<UserCD> = UserCD.fetchRequest()
                 fetch.predicate = NSPredicate(format: "id == %@", user.id)
                 for existing in try self.context.fetch(fetch) { self.context.delete(existing) }
-                let cd = UserCD(context: self.context)
+                let cd = UserCD.insert(into: self.context)
                 cd.id = user.id
                 cd.username = user.username
                 cd.firstName = user.firstName

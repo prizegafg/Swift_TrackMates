@@ -8,21 +8,32 @@
 import UIKit
 import Combine
 
-// MARK: - Login (View)
 final class LoginView: UIViewController {
     var presenter: LoginPresenterProtocol!
     private var cancellables = Set<AnyCancellable>()
 
-    // MARK: UI Elements
-    let overlayView: UIView = {
+    // MARK: UI Tokens
+    private enum UI {
+        static let cardSide: CGFloat = 32
+        static let hInset: CGFloat  = 18
+        static let vTitle: CGFloat  = 32
+        static let vGapBig: CGFloat = 28
+        static let vGap: CGFloat    = 14
+        static let vBtnTop: CGFloat = 22
+        static let vBottom: CGFloat = 18
+    }
+
+    // MARK: Views
+    private let overlayView: UIView = {
         let v = UIView()
-        v.backgroundColor = UIColor.black.withAlphaComponent(0.3)
         v.translatesAutoresizingMaskIntoConstraints = false
+        v.backgroundColor = UIColor.black.withAlphaComponent(0.30)
         return v
     }()
 
-    let cardView: UIView = {
+    private let cardView: UIView = {
         let v = UIView()
+        v.translatesAutoresizingMaskIntoConstraints = false
         v.backgroundColor = UIColor.white.withAlphaComponent(0.85)
         v.layer.cornerRadius = 24
         v.layer.masksToBounds = false
@@ -30,70 +41,67 @@ final class LoginView: UIViewController {
         v.layer.shadowOpacity = 0.08
         v.layer.shadowRadius = 16
         v.layer.shadowOffset = CGSize(width: 0, height: 8)
-        v.translatesAutoresizingMaskIntoConstraints = false
         return v
     }()
 
-    let titleLabel: UILabel = {
+    private let titleLabel: UILabel = {
         let lbl = UILabel()
+        lbl.translatesAutoresizingMaskIntoConstraints = false
         lbl.text = "Welcome Back!"
         lbl.font = .systemFont(ofSize: 24, weight: .bold)
-        lbl.textColor = .black
+        lbl.textColor = .tmLabelPrimary
         lbl.textAlignment = .center
-        lbl.translatesAutoresizingMaskIntoConstraints = false
         return lbl
     }()
 
-    let subtitleLabel: UILabel = {
+    private let subtitleLabel: UILabel = {
         let lbl = UILabel()
+        lbl.translatesAutoresizingMaskIntoConstraints = false
         lbl.text = "Sign in to Track Mates to start your run or ride session."
         lbl.font = .systemFont(ofSize: 14, weight: .regular)
-        lbl.textColor = .darkGray
+        lbl.textColor = .tmLabelSecondary
         lbl.textAlignment = .center
         lbl.numberOfLines = 0
-        lbl.translatesAutoresizingMaskIntoConstraints = false
         return lbl
     }()
 
-    let emailField = LoginView.makeField(placeholder: "Email", keyboard: .emailAddress)
-    let passwordField = LoginView.makeField(placeholder: "Password", secure: true)
-    private lazy var showLoginPassBtn: UIButton = LoginView.makeEyeButton()
+    // Reusable components
+    private let emailField    = DesignTextField.field("Email", keyboard: .emailAddress)
+    private let passwordField = DesignTextField.secure("Password")
+    private lazy var showLoginPassBtn: UIButton = DesignTextField.addEyeToggle(to: passwordField)
 
-    let loginButton = LoginView.makeButton(title: "Sign In")
-    let registerButton: UIButton = {
-        let btn = UIButton(type: .system)
-        btn.setTitle("Create New Account", for: .normal)
-        btn.setTitleColor(.systemGreen, for: .normal)
-        btn.titleLabel?.font = .systemFont(ofSize: 14, weight: .medium)
-        btn.translatesAutoresizingMaskIntoConstraints = false
-        return btn
+    private let loginButton    = DesignButton.primary("Sign In")
+    private let registerButton = DesignButton.link("Create New Account")
+
+    private let activity: UIActivityIndicatorView = {
+        let a = UIActivityIndicatorView(style: .medium)
+        a.translatesAutoresizingMaskIntoConstraints = false
+        a.hidesWhenStopped = true
+        return a
     }()
-    
-    private let activity = UIActivityIndicatorView(style: .medium)
 
     // MARK: Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
-        if presenter == nil {
+        if presenter == nil { // safeguard for router-less init (dev time)
             presenter = LoginPresenter(interactor: LoginInteractor(), router: LoginRouter())
         }
         setupBackground()
-        setupUI()
-        setupLayout()
-        setupBinding()
-        setupActions()
-        setupKeyboardDismiss()
-        
+        buildUI()
+        layoutUI()
+        bindPresenter()
+        bindActions()
+        enableKeyboardDismiss()
         presenter.attach(view: self)
     }
 }
 
-// MARK: - LoginViewProtocol
+// MARK: - View Protocol
 extension LoginView: LoginViewProtocol {
     var vc: UIViewController { self }
 
     func setLoading(_ loading: Bool) {
-        if loading { activity.startAnimating() } else { activity.stopAnimating() }
+        loading ? activity.startAnimating() : activity.stopAnimating()
         view.isUserInteractionEnabled = !loading
         loginButton.alpha = loading ? 0.7 : 1
     }
@@ -105,44 +113,7 @@ extension LoginView: LoginViewProtocol {
     }
 }
 
-// MARK: - UI Factory
-private extension LoginView {
-    static func makeField(placeholder: String, keyboard: UIKeyboardType = .default, secure: Bool = false) -> UITextField {
-        let tf = UITextField()
-        tf.placeholder = placeholder
-        tf.autocapitalizationType = .none
-        tf.keyboardType = keyboard
-        tf.isSecureTextEntry = secure
-        tf.borderStyle = .roundedRect
-        tf.backgroundColor = UIColor(white: 0.97, alpha: 1)
-        tf.translatesAutoresizingMaskIntoConstraints = false
-        tf.heightAnchor.constraint(equalToConstant: 44).isActive = true
-        return tf
-    }
-
-    static func makeButton(title: String) -> UIButton {
-        let btn = UIButton(type: .system)
-        btn.setTitle(title, for: .normal)
-        btn.backgroundColor = .systemGreen
-        btn.setTitleColor(.white, for: .normal)
-        btn.titleLabel?.font = .boldSystemFont(ofSize: 16)
-        btn.layer.cornerRadius = 12
-        btn.translatesAutoresizingMaskIntoConstraints = false
-        btn.heightAnchor.constraint(equalToConstant: 48).isActive = true
-        return btn
-    }
-    
-    static func makeEyeButton() -> UIButton {
-        let btn = UIButton(type: .system)
-        btn.setImage(UIImage(systemName: "eye.slash"), for: .normal)
-        btn.tintColor = .secondaryLabel
-        btn.frame = CGRect(x: 0, y: 0, width: 44, height: 44)
-        btn.accessibilityLabel = "Show or hide password"
-        return btn
-    }
-}
-
-// MARK: - Background Setup
+// MARK: - Setup UI
 private extension LoginView {
     func setupBackground() {
         let bg = UIImageView()
@@ -150,51 +121,36 @@ private extension LoginView {
         bg.contentMode = .scaleAspectFill
         bg.clipsToBounds = true
         bg.image = UIImage(named: preferredLoginBGName())
-
         view.addSubview(bg)
-        view.sendSubviewToBack(bg)
-
         NSLayoutConstraint.activate([
             bg.topAnchor.constraint(equalTo: view.topAnchor),
             bg.bottomAnchor.constraint(equalTo: view.bottomAnchor),
             bg.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             bg.trailingAnchor.constraint(equalTo: view.trailingAnchor),
         ])
+        view.sendSubviewToBack(bg)
     }
 
     func preferredLoginBGName() -> String {
         switch traitCollection.userInterfaceIdiom {
-        case .pad:
-            return "loginbg_ipad"
-        case .phone:
-            return "loginbg_iphone"
-        case .mac:
-            return "loginbg_ipad"
-        default:
-            return "loginbg_iphone"
+        case .pad, .mac: return "loginbg_ipad"
+        case .phone:     return "loginbg_iphone"
+        default:         return "loginbg_iphone"
         }
     }
-}
 
-
-// MARK: - Setup UI
-private extension LoginView {
-    func setupUI() {
+    func buildUI() {
         view.backgroundColor = .black
         view.addSubview(overlayView)
         view.addSubview(cardView)
 
-        [titleLabel, subtitleLabel, emailField, passwordField, loginButton, registerButton]
+        [titleLabel, subtitleLabel, emailField, passwordField, loginButton, registerButton, activity]
             .forEach { cardView.addSubview($0) }
-        passwordField.rightView = showLoginPassBtn
-        passwordField.rightViewMode = .always
 
+        showLoginPassBtn = DesignTextField.addEyeToggle(to: passwordField)
     }
-}
 
-// MARK: - Layout
-private extension LoginView {
-    func setupLayout() {
+    func layoutUI() {
         NSLayoutConstraint.activate([
             // overlay
             overlayView.topAnchor.constraint(equalTo: view.topAnchor),
@@ -204,67 +160,64 @@ private extension LoginView {
 
             // card
             cardView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-            cardView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 32),
-            cardView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -32),
+            cardView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: UI.cardSide),
+            cardView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -UI.cardSide),
 
             // title
-            titleLabel.topAnchor.constraint(equalTo: cardView.topAnchor, constant: 32),
-            titleLabel.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 18),
-            titleLabel.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -18),
+            titleLabel.topAnchor.constraint(equalTo: cardView.topAnchor, constant: UI.vTitle),
+            titleLabel.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: UI.hInset),
+            titleLabel.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -UI.hInset),
 
             // subtitle
             subtitleLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 8),
-            subtitleLabel.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 18),
-            subtitleLabel.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -18),
+            subtitleLabel.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: UI.hInset),
+            subtitleLabel.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -UI.hInset),
 
             // email
-            emailField.topAnchor.constraint(equalTo: subtitleLabel.bottomAnchor, constant: 28),
-            emailField.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 18),
-            emailField.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -18),
+            emailField.topAnchor.constraint(equalTo: subtitleLabel.bottomAnchor, constant: UI.vGapBig),
+            emailField.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: UI.hInset),
+            emailField.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -UI.hInset),
 
             // password
-            passwordField.topAnchor.constraint(equalTo: emailField.bottomAnchor, constant: 14),
-            passwordField.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 18),
-            passwordField.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -18),
+            passwordField.topAnchor.constraint(equalTo: emailField.bottomAnchor, constant: UI.vGap),
+            passwordField.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: UI.hInset),
+            passwordField.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -UI.hInset),
 
             // login button
-            loginButton.topAnchor.constraint(equalTo: passwordField.bottomAnchor, constant: 22),
-            loginButton.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 18),
-            loginButton.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -18),
+            loginButton.topAnchor.constraint(equalTo: passwordField.bottomAnchor, constant: UI.vBtnTop),
+            loginButton.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: UI.hInset),
+            loginButton.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -UI.hInset),
 
-            // register button
+            // register link
             registerButton.topAnchor.constraint(equalTo: loginButton.bottomAnchor, constant: 14),
-            registerButton.bottomAnchor.constraint(equalTo: cardView.bottomAnchor, constant: -18),
-            registerButton.centerXAnchor.constraint(equalTo: cardView.centerXAnchor)
+            registerButton.centerXAnchor.constraint(equalTo: cardView.centerXAnchor),
+            registerButton.bottomAnchor.constraint(equalTo: cardView.bottomAnchor, constant: -UI.vBottom),
+
+            // activity on top of login button
+            activity.centerXAnchor.constraint(equalTo: loginButton.centerXAnchor),
+            activity.centerYAnchor.constraint(equalTo: loginButton.centerYAnchor),
         ])
     }
 }
 
-// MARK: - Binding (Combine)
+// MARK: - Bindings & Actions
 private extension LoginView {
-    func setupBinding() {
+    func bindPresenter() {
         presenter.loginResultPublisher
             .receive(on: RunLoop.main)
-            .sink { _ in  }
+            .sink { _ in /* no-op, router handles navigation */ }
             .store(in: &cancellables)
-        
+
         presenter.errorPublisher
             .receive(on: RunLoop.main)
-            .sink { [weak self] _ in
-                
-                self?.passwordField.becomeFirstResponder()
-            }
+            .sink { [weak self] _ in self?.passwordField.becomeFirstResponder() }
             .store(in: &cancellables)
     }
-}
 
-// MARK: - Actions
-private extension LoginView {
-    func setupActions() {
+    func bindActions() {
         loginButton.addTarget(self, action: #selector(loginButtonTapped), for: .touchUpInside)
         registerButton.addTarget(self, action: #selector(registerButtonTapped), for: .touchUpInside)
-        showLoginPassBtn.addTarget(self, action: #selector(toggleLoginPassword), for: .touchUpInside)
-
+        // eye button action sudah di-handle oleh DesignTextField.addEyeToggle(to:)
     }
 
     @objc func loginButtonTapped() {
@@ -277,37 +230,16 @@ private extension LoginView {
     @objc func registerButtonTapped() {
         presenter.onTapRegister()
     }
-    
-    @objc func toggleLoginPassword() {
-        toggleSecureEntry(passwordField, button: showLoginPassBtn)
-    }
-    
-    @objc func dismissKeyboard() {
-        view.endEditing(true)
-    }
 }
 
-// MARK: - Helpers
+// MARK: - Keyboard dismiss
 private extension LoginView {
-    func setupKeyboardDismiss() {
+    func enableKeyboardDismiss() {
         let tap = UITapGestureRecognizer(target: self, action: #selector(dismissKeyboard))
         tap.cancelsTouchesInView = false
         view.addGestureRecognizer(tap)
     }
-    
-    private func toggleSecureEntry(_ tf: UITextField, button: UIButton) {
-        let wasFirstResponder = tf.isFirstResponder
-        let existingText = tf.text
-
-        tf.isSecureTextEntry.toggle()
-        if wasFirstResponder { tf.resignFirstResponder() }
-        tf.text = nil
-        tf.text = existingText
-        if wasFirstResponder { tf.becomeFirstResponder() }
-
-        let img = tf.isSecureTextEntry ? "eye.slash" : "eye"
-        button.setImage(UIImage(systemName: img), for: .normal)
+    @objc func dismissKeyboard() {
+        view.endEditing(true)
     }
-
-    
 }

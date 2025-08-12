@@ -27,7 +27,11 @@ extension UserCD {
     @NSManaged public var lastName: String?
     @NSManaged public var email: String?
     @NSManaged public var dateOfBirth: Date?
-
+    
+    static func insert(into context: NSManagedObjectContext) -> UserCD {
+        let entity = NSEntityDescription.entity(forEntityName: "User", in: context)!
+        return UserCD(entity: entity, insertInto: context)
+    }
 }
 
 extension UserCD : Identifiable {

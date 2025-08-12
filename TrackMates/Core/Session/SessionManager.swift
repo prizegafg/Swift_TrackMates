@@ -5,7 +5,6 @@
 //  Created by Prizega Fromadia on 08/08/25.
 //
 
-// TrackMates/Core/Session/SessionManager.swift
 
 import UIKit
 import Combine
@@ -28,7 +27,6 @@ final class SessionManager {
     private let sessionRepo: SessionRepositoryProtocol
     private let sessionService: SessionServiceProtocol
 
-    // local repos untuk pre-load setelah login
     private let userQueryRepo: UserRepositoryProtocol
     private let trackingRepo: TrackingRepositoryProtocol
     private let caloryRepo: CaloryRepositoryProtocol
@@ -64,7 +62,6 @@ final class SessionManager {
         case .login:
             return LoginRouter.makeModule()
         case .home:
-            // udah login -> pre-load data lokal
             preloadLocalData()
             return HomeRouter.makeModule()
         }
@@ -74,7 +71,6 @@ final class SessionManager {
         sessionRepo.setHasSeenOnboarding(true)
     }
 
-    // dipanggil saat onboarding selesai
     private func routeAfterOnboarding() {
         let vc: UIViewController
         if sessionService.isAuthenticated() {
@@ -86,7 +82,6 @@ final class SessionManager {
         swapRoot(to: vc)
     }
 
-    // dipanggil presenter login/register ketika sukses auth
     func didLogin() {
         preloadLocalData()
         swapRoot(to: HomeRouter.makeModule())
@@ -95,8 +90,9 @@ final class SessionManager {
     // MARK: - Preload
 
     private func preloadLocalData() {
-        // aman: non-blocking; error di-log saja supaya tidak ganggu UX
-        userQueryRepo.current { _ in }
+        if let uid = sessionService.currentUserId() {
+            userQueryRepo.get(uid) { _ in }
+        }
 
         trackingRepo.getRuns { _ in }
         trackingRepo.getRides { _ in }
