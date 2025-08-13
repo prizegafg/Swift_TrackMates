@@ -8,18 +8,6 @@
 import UIKit
 import Combine
 
-struct HomeHeaderVM {
-    let greeting: String   // e.g. "Good Morning,"
-    let name: String       // e.g. "Andy"
-}
-
-struct HomeStatsVM {
-    let title: String      // "Running last week"
-    let totalText: String  // "48.75 KM"
-    let deltaText: String  // "↑ 12% vs last week"
-    let series: [Double]   // sparkline points
-}
-
 
 final class HomeView: UIViewController, HomeViewProtocol {
     var presenter: HomePresenterProtocol!
@@ -62,7 +50,6 @@ final class HomeView: UIViewController, HomeViewProtocol {
         return l
     }()
 
-    // “Story IG” row (hidden now but siap dipakai)
     private let storiesContainer = UIView()
     private var storiesH: NSLayoutConstraint!
 
@@ -70,7 +57,11 @@ final class HomeView: UIViewController, HomeViewProtocol {
     private let statsTitle = UILabel()
     private let statsTotal = UILabel()
     private let statsDelta = UILabel()
-    private let spark = SparklineView()
+    private let chart = GroupedBarChartView()
+    private let legend = ChartLegendView()
+    private let rankCard = DSCard()
+    private let rankTitle = UILabel()
+    private let rankList = RankListView()
 
     // MARK: - LifeCycle
     override func viewDidLoad() {
@@ -92,12 +83,42 @@ final class HomeView: UIViewController, HomeViewProtocol {
     func render(header: HomeHeaderVM) {
         greetingLabel.text = "\(header.greeting) \(header.name)"
     }
-
+    
     func render(stats: HomeStatsVM) {
         statsTitle.text = stats.title
         statsTotal.text = stats.totalText
         statsDelta.text = stats.deltaText
-        spark.values = stats.series
+    }
+    func render(rank: [RankItemVM]) { rankList.items = rank }
+    
+    func render(chart vm: HomeChartVM) {
+        // warna: biru = run, oranye = ride, kuning = walk
+        let runColor  = UIColor.tmTint
+        let rideColor = UIColor.systemOrange
+        let walkColor = UIColor(hex: 0xFACC15)
+        
+        var items: [LegendItem] = []
+        var series: [ChartSeries] = []
+        
+        if vm.run.contains(where: { $0 > 0 }) {
+            series.append(.init(color: runColor,  values: vm.run))
+            items.append(.init(color: runColor, text: "Run"))
+        }
+        if vm.ride.contains(where: { $0 > 0 }) {
+            series.append(.init(color: rideColor, values: vm.ride))
+            items.append(.init(color: rideColor, text: "Ride"))
+        }
+        if vm.walk.contains(where: { $0 > 0 }) {
+            series.append(.init(color: walkColor, values: vm.walk))
+            items.append(.init(color: walkColor, text: "Walk"))
+        }
+        
+        chart.contentInset = .init(top: 6, left: 16, bottom: 22, right: 16) // ada jeda kiri-kanan
+        chart.groupSpacing = 16
+        chart.barWidth = 8
+        chart.barSpacing = 4
+        chart.setData(labels: vm.days, series: series)
+        legend.items = items
     }
 }
 
@@ -108,7 +129,7 @@ private extension HomeView {
         [content, titleLabel, logoutBtn, greetingLabel, storiesContainer, statsCard].forEach {
             $0.translatesAutoresizingMaskIntoConstraints = false
         }
-        [statsTitle, statsTotal, statsDelta, spark].forEach { $0.translatesAutoresizingMaskIntoConstraints = false }
+        [statsTitle, statsTotal, statsDelta, chart, legend].forEach { $0.translatesAutoresizingMaskIntoConstraints = false }
 
         view.addSubview(topBar)
         view.addSubview(scroll)
@@ -120,29 +141,37 @@ private extension HomeView {
         view.addSubview(greetingLabel)
 
         // stories (hidden)
-        storiesContainer.backgroundColor = .clear
-        storiesH = storiesContainer.heightAnchor.constraint(equalToConstant: 0) // hidden: height 0
-        storiesH.isActive = true
         content.addSubview(storiesContainer)
-
-        // stats card
+        storiesH = storiesContainer.heightAnchor.constraint(equalToConstant: 0)
+        storiesH.isActive = true
+        
         statsTitle.font = .systemFont(ofSize: 13, weight: .medium)
         statsTitle.textColor = .tmLabelSecondary
         statsTotal.font = .systemFont(ofSize: 28, weight: .bold)
         statsTotal.textColor = .tmLabelPrimary
         statsDelta.font = .systemFont(ofSize: 12, weight: .semibold)
         statsDelta.textColor = .tmSuccess
-
         statsCard.addSubview(statsTitle)
         statsCard.addSubview(statsTotal)
         statsCard.addSubview(statsDelta)
-        statsCard.addSubview(spark)
+        statsCard.addSubview(chart)
+        statsCard.addSubview(legend)
         content.addSubview(statsCard)
+        
+        // rank card
+        rankTitle.translatesAutoresizingMaskIntoConstraints = false
+        rankList.translatesAutoresizingMaskIntoConstraints = false
+        rankTitle.text = "Weekly Activity Rank"
+        rankTitle.font = .systemFont(ofSize: 13, weight: .medium)
+        rankTitle.textColor = .tmLabelSecondary
+        rankCard.addSubview(rankTitle)
+        rankCard.addSubview(rankList)
+        content.addSubview(rankCard)
     }
 
     func layoutUI() {
         NSLayoutConstraint.activate([
-            // top bar + greeting
+            
             topBar.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 6),
             topBar.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: UI.side),
             topBar.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -UI.side),
@@ -156,7 +185,6 @@ private extension HomeView {
             greetingLabel.leadingAnchor.constraint(equalTo: topBar.leadingAnchor),
             greetingLabel.trailingAnchor.constraint(lessThanOrEqualTo: topBar.trailingAnchor),
 
-            // scroll
             scroll.topAnchor.constraint(equalTo: greetingLabel.bottomAnchor, constant: UI.big),
             scroll.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             scroll.trailingAnchor.constraint(equalTo: view.trailingAnchor),
@@ -168,12 +196,10 @@ private extension HomeView {
             content.bottomAnchor.constraint(equalTo: scroll.contentLayoutGuide.bottomAnchor),
             content.widthAnchor.constraint(equalTo: scroll.frameLayoutGuide.widthAnchor),
 
-            // stories (hidden sekarang)
             storiesContainer.topAnchor.constraint(equalTo: content.topAnchor),
             storiesContainer.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: UI.side),
             storiesContainer.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -UI.side),
 
-            // stats card
             statsCard.topAnchor.constraint(equalTo: storiesContainer.bottomAnchor, constant: UI.big),
             statsCard.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: UI.side),
             statsCard.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -UI.side),
@@ -188,14 +214,33 @@ private extension HomeView {
             statsDelta.centerYAnchor.constraint(equalTo: statsTotal.centerYAnchor),
             statsDelta.trailingAnchor.constraint(equalTo: statsCard.trailingAnchor, constant: -16),
 
-            spark.topAnchor.constraint(equalTo: statsTotal.bottomAnchor, constant: 14),
-            spark.leadingAnchor.constraint(equalTo: statsTitle.leadingAnchor),
-            spark.trailingAnchor.constraint(equalTo: statsCard.trailingAnchor, constant: -16),
-            spark.heightAnchor.constraint(equalToConstant: 64),
-            spark.bottomAnchor.constraint(equalTo: statsCard.bottomAnchor, constant: -16),
-
-            // content bottom
-            statsCard.bottomAnchor.constraint(equalTo: content.bottomAnchor, constant: -24)
+            chart.topAnchor.constraint(equalTo: statsTotal.bottomAnchor, constant: 14),
+            chart.leadingAnchor.constraint(equalTo: statsTitle.leadingAnchor),
+            chart.trailingAnchor.constraint(equalTo: statsCard.trailingAnchor, constant: -16),
+            chart.heightAnchor.constraint(equalToConstant: 100),
+            
+            legend.topAnchor.constraint(equalTo: chart.bottomAnchor, constant: 8),
+            legend.leadingAnchor.constraint(equalTo: chart.leadingAnchor),
+            legend.trailingAnchor.constraint(lessThanOrEqualTo: chart.trailingAnchor),
+            legend.heightAnchor.constraint(greaterThanOrEqualToConstant: 14),
+            legend.bottomAnchor.constraint(equalTo: statsCard.bottomAnchor, constant: -16),
+            
+            // Rank card under chart
+            rankCard.topAnchor.constraint(equalTo: statsCard.bottomAnchor, constant: UI.big),
+            rankCard.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: UI.side),
+            rankCard.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -UI.side),
+            
+            rankTitle.topAnchor.constraint(equalTo: rankCard.topAnchor, constant: 16),
+            rankTitle.leadingAnchor.constraint(equalTo: rankCard.leadingAnchor, constant: 16),
+            rankTitle.trailingAnchor.constraint(lessThanOrEqualTo: rankCard.trailingAnchor, constant: -16),
+            
+            rankList.topAnchor.constraint(equalTo: rankTitle.bottomAnchor, constant: 10),
+            rankList.leadingAnchor.constraint(equalTo: rankCard.leadingAnchor),
+            rankList.trailingAnchor.constraint(equalTo: rankCard.trailingAnchor),
+            rankList.bottomAnchor.constraint(equalTo: rankCard.bottomAnchor, constant: -8),
+            
+            // bottom spacing for scroll
+            rankCard.bottomAnchor.constraint(equalTo: content.bottomAnchor, constant: -24)
         ])
     }
 

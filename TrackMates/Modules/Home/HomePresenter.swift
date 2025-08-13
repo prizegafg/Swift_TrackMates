@@ -13,6 +13,8 @@ protocol HomeViewProtocol: AnyObject {
     func showError(_ message: String)
     func render(header: HomeHeaderVM)
     func render(stats: HomeStatsVM)
+    func render(rank: [RankItemVM])
+    func render(chart: HomeChartVM)
 }
 
 protocol HomePresenterProtocol: AnyObject {
@@ -40,6 +42,12 @@ final class HomePresenter: HomePresenterProtocol {
         }
         interactor.loadWeeklyStats { [weak self] res in
             if case .success(let vm) = res { self?.view?.render(stats: vm) }
+        }
+        interactor.loadWeeklyRank { [weak self] res in         
+            if case .success(let items) = res { self?.view?.render(rank: items) }
+        }
+        interactor.loadWeeklyChart { [weak self] res in
+            if case .success(let vm) = res { self?.view?.render(chart: vm) }
         }
     }
 
