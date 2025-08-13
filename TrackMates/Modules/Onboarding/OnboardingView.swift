@@ -10,10 +10,8 @@ import UIKit
 final class OnboardingView: UIViewController {
     var presenter: OnboardingPresenterProtocol!
 
-    // Gradient
     private let gradient = CAGradientLayer()
 
-    // Collection
     private let layout: UICollectionViewFlowLayout = {
         let l = UICollectionViewFlowLayout()
         l.scrollDirection = .horizontal
@@ -32,7 +30,6 @@ final class OnboardingView: UIViewController {
         return cv
     }()
 
-    // Bottom controls (stack yang bisa di-swap dengan CTA)
     private let backBtn: UIButton = {
         let b = UIButton(type: .system)
         b.setTitle("Back", for: .normal)
@@ -63,10 +60,9 @@ final class OnboardingView: UIViewController {
         return p
     }()
 
-    // CTA footer (hidden by default)
     private let ctaBtn: UIButton = {
         let b = UIButton(type: .system)
-        b.setTitle("Understand", for: .normal)
+        b.setTitle("Get Started", for: .normal)
         b.setTitleColor(.white, for: .normal)
         b.backgroundColor = UIColor(red: 0.62, green: 0.82, blue: 0.23, alpha: 1)
         b.layer.cornerRadius = 12
@@ -106,14 +102,12 @@ extension OnboardingView: OnboardingViewProtocol {
         dots.currentPage = index
     }
 
-    // Animasi morph footer (controls <-> CTA)
     func setFooter(_ state: FooterState) {
         switch state {
         case .controls(let canBack):
             backBtn.isEnabled = canBack
             backBtn.alpha = canBack ? 1.0 : 0.5
 
-            // animate crossfade + slide
             if ctaContainer.alpha > 0 || !ctaContainer.isHidden {
                 UIView.animate(withDuration: 0.28, delay: 0, options: [.curveEaseInOut]) {
                     self.ctaContainer.alpha = 0
@@ -173,7 +167,6 @@ extension OnboardingView: UICollectionViewDataSource, UICollectionViewDelegate {
         presenter.didScroll(to: page)
     }
 
-    // simple slide-in animation saat willDisplay
     func collectionView(_ collectionView: UICollectionView, willDisplay cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
         cell.alpha = 0
         cell.transform = CGAffineTransform(translationX: 30, y: 0)

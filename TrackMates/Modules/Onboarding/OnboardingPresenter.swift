@@ -14,15 +14,15 @@ struct OnboardingSlideVM {
 }
 
 enum FooterState {
-    case controls(canBack: Bool)     // Back + Dots + Next
-    case cta                         // “Understand”
+    case controls(canBack: Bool)
+    case cta
 }
 
 protocol OnboardingViewProtocol: AnyObject {
     func reload()
     func setPage(_ index: Int, total: Int)
     func setFooter(_ state: FooterState)
-    func scroll(to index: Int) // view-only scrolling, no state
+    func scroll(to index: Int) 
 }
 
 protocol OnboardingPresenterProtocol: AnyObject {
