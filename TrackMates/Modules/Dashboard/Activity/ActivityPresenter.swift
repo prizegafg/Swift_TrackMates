@@ -18,6 +18,7 @@ protocol ActivityViewProtocol: AnyObject {
 protocol ActivityPresenterProtocol: AnyObject {
     func attach(view: ActivityViewProtocol)
     func viewDidLoad()
+    func startRun(from vc: UIViewController)
 }
 
 // MARK: - View Models
@@ -56,5 +57,9 @@ final class ActivityPresenter: ActivityPresenterProtocol {
             sparkline: [0.1,0.6,0.35,0.8,0.55,0.9,0.7]
         )
         view?.renderRecent(vm)
+    }
+    
+    func startRun(from vc: UIViewController) {
+        router.presentRun(from: vc)
     }
 }

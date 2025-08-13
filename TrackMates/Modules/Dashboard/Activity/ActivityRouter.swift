@@ -7,9 +7,20 @@
 
 import UIKit
 
-protocol ActivityRouterProtocol: AnyObject { }
+protocol ActivityRouterProtocol: AnyObject {
+    func presentRun(from: UIViewController)
+    
+}
 
-final class ActivityRouter: ActivityRouterProtocol { }
+final class ActivityRouter: ActivityRouterProtocol {
+    
+    func presentRun(from: UIViewController) {
+        let runVC = RunRouter.makeModule()
+        runVC.modalPresentationStyle = .fullScreen
+        from.present(runVC, animated: true)
+    }
+    
+}
 
 extension ActivityRouter {
     static func makeModule() -> UIViewController {

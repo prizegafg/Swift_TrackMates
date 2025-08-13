@@ -67,7 +67,7 @@ final class ActivityView: UIViewController, ActivityViewProtocol {
 
         buildUI()
         layoutUI()
-
+        setUpAction()
         presenter.viewDidLoad()
     }
 
@@ -226,5 +226,14 @@ private extension ActivityView {
         // accessibility
         button.accessibilityTraits.insert(.button)
     }
+}
+
+extension ActivityView {
+    func setUpAction(){
+        runBtn.addTarget(self, action: #selector(runTap), for: .touchUpInside)
+    }
+    
+    @objc func runTap() { presenter.startRun(from: self) }
+
 }
 
