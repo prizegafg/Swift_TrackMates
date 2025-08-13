@@ -92,7 +92,6 @@ final class HomeView: UIViewController, HomeViewProtocol {
     func render(rank: [RankItemVM]) { rankList.items = rank }
     
     func render(chart vm: HomeChartVM) {
-        // warna: biru = run, oranye = ride, kuning = walk
         let runColor  = UIColor.tmTint
         let rideColor = UIColor.systemOrange
         let walkColor = UIColor(hex: 0xFACC15)
@@ -113,7 +112,7 @@ final class HomeView: UIViewController, HomeViewProtocol {
             items.append(.init(color: walkColor, text: "Walk"))
         }
         
-        chart.contentInset = .init(top: 6, left: 16, bottom: 22, right: 16) // ada jeda kiri-kanan
+        chart.contentInset = .init(top: 6, left: 16, bottom: 22, right: 16) 
         chart.groupSpacing = 16
         chart.barWidth = 8
         chart.barSpacing = 4
@@ -138,7 +137,7 @@ private extension HomeView {
         // top bar
         topBar.addSubview(titleLabel)
         topBar.addSubview(logoutBtn)
-        view.addSubview(greetingLabel)
+        topBar.addSubview(greetingLabel)
 
         // stories (hidden)
         content.addSubview(storiesContainer)
@@ -184,6 +183,7 @@ private extension HomeView {
             greetingLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 4),
             greetingLabel.leadingAnchor.constraint(equalTo: topBar.leadingAnchor),
             greetingLabel.trailingAnchor.constraint(lessThanOrEqualTo: topBar.trailingAnchor),
+            greetingLabel.bottomAnchor.constraint(equalTo: topBar.bottomAnchor),
 
             scroll.topAnchor.constraint(equalTo: greetingLabel.bottomAnchor, constant: UI.big),
             scroll.leadingAnchor.constraint(equalTo: view.leadingAnchor),

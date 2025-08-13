@@ -20,7 +20,7 @@ struct HomeStatsVM {
 }
 
 struct HomeChartVM {
-    let days: [String]       // ex: ["M","T","W","T","F","S","S"]
+    let days: [String]
     let run: [Double]
     let ride: [Double]
     let walk: [Double]
@@ -70,7 +70,7 @@ final class HomeInteractor: HomeInteractorProtocol {
 
     func loadWeeklyStats(completion: @escaping (Result<HomeStatsVM, Error>) -> Void) {
         trackingRepo.getRuns { _ in
-            let series: [Double] = [3.2, 5.1, 0.0, 7.8, 4.2, 9.0, 6.3]
+            let series: [Double] = [13.2, 8.25, 0.0, 7.8, 4.2, 9.0, 6.3]
             let total = series.reduce(0, +)
             let vm = HomeStatsVM(
                 title: "Last Week Activity",
@@ -86,16 +86,17 @@ final class HomeInteractor: HomeInteractorProtocol {
         let items: [RankItemVM] = [
             .init(rank: 1, name: "Andy William", distanceText: "59.23 KM"),
             .init(rank: 2, name: "You",          distanceText: "48.75 KM"),
-            .init(rank: 3, name: "Thomas Speed", distanceText: "32.07 KM")
+            .init(rank: 3, name: "Thomas Speed", distanceText: "32.07 KM"),
+            .init(rank: 4, name: "Jolly Rodger", distanceText: "25.12 KM"),
+            .init(rank: 5, name: "Jennie McPhiss", distanceText: "15.25 KM")
         ]
         completion(.success(items))
     }
     
     func loadWeeklyChart(completion: @escaping (Result<HomeChartVM, Error>) -> Void) {
-        // Contoh stub; nanti ganti hit repo/compute dari data asli
         let days = ["M","T","W","T","F","S","S"]
-        let run  = [2.4, 3.1, 0.0, 6.2, 4.0, 7.5, 6.4]
-        let ride = [2.0, 2.9, 8.2, 9.0, 0.0, 12.3, 4.8]
+        let run  = [5.4, 6.1, 0.0, 6.2, 4.0, 7.5, 6.4]
+        let ride = [2.0, 4.9, 11.35, 9.0, 0.0, 12.3, 4.8]
         let walk = [1.6, 0.8, 0.3, 0.0, 1.0, 0.0, 1.2]
         completion(.success(.init(days: days, run: run, ride: ride, walk: walk)))
     }
