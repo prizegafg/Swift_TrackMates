@@ -61,6 +61,17 @@ final class ActivityView: UIViewController, ActivityViewProtocol {
     private let metricsRow = UIStackView()
     private let chart = SparklineView()
 
+    private let activityCard = DSCard()
+    private let activityTitle: UILabel = {
+        let l = UILabel()
+        l.text = "Your Activity"
+        l.font = .systemFont(ofSize: 13, weight: .medium)
+        l.textColor = .tmLabelSecondary
+        l.translatesAutoresizingMaskIntoConstraints = false
+        return l
+    }()
+    private let activityList = UIStackView()
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .tmBackground
@@ -88,6 +99,14 @@ final class ActivityView: UIViewController, ActivityViewProtocol {
         metricsRow.addArrangedSubview(metric("Heart Rate", vm.heartRateText))
         metricsRow.addArrangedSubview(metric("Elevation", vm.elevationText))
         chart.values = vm.sparkline
+    }
+    
+    func renderSummary(_ vm: ActivitySummaryVM) {
+        activityTitle.text = vm.title
+        activityList.arrangedSubviews.forEach { $0.removeFromSuperview() }
+        vm.items.forEach { item in
+            activityList.addArrangedSubview(StatRow(title: item.title, value: item.value, icon: item.icon))
+        }
     }
 }
 
@@ -141,6 +160,16 @@ private extension ActivityView {
         recentCard.addSubview(durationLbl)
         recentCard.addSubview(metricsRow)
         recentCard.addSubview(chart)
+        
+        activityList.axis = .vertical
+        activityList.alignment = .fill
+        activityList.distribution = .fill
+        activityList.spacing = 10
+        activityList.translatesAutoresizingMaskIntoConstraints = false
+        
+        activityCard.addSubview(activityTitle)
+        activityCard.addSubview(activityList)
+        view.addSubview(activityCard)
     }
 
     func layoutUI() {
@@ -193,6 +222,21 @@ private extension ActivityView {
             chart.trailingAnchor.constraint(equalTo: recentCard.trailingAnchor, constant: -16),
             chart.heightAnchor.constraint(equalToConstant: 72),
             chart.bottomAnchor.constraint(equalTo: recentCard.bottomAnchor, constant: -16)
+        ])
+        
+        NSLayoutConstraint.activate([
+            activityCard.topAnchor.constraint(equalTo: recentCard.bottomAnchor, constant: UIK.big),
+            activityCard.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: UIK.side),
+            activityCard.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -UIK.side),
+            
+            activityTitle.topAnchor.constraint(equalTo: activityCard.topAnchor, constant: 16),
+            activityTitle.leadingAnchor.constraint(equalTo: activityCard.leadingAnchor, constant: 16),
+            activityTitle.trailingAnchor.constraint(lessThanOrEqualTo: activityCard.trailingAnchor, constant: -16),
+            
+            activityList.topAnchor.constraint(equalTo: activityTitle.bottomAnchor, constant: 10),
+            activityList.leadingAnchor.constraint(equalTo: activityCard.leadingAnchor, constant: 12),
+            activityList.trailingAnchor.constraint(equalTo: activityCard.trailingAnchor, constant: -12),
+            activityList.bottomAnchor.constraint(equalTo: activityCard.bottomAnchor, constant: -12),
         ])
     }
 

@@ -1,5 +1,5 @@
 //
-//  RunPresenter.swift
+//  TrackingPresenter.swift
 //  TrackMates
 //
 //  Created by Prizega Fromadia on 06/08/25.
@@ -8,7 +8,7 @@
 import UIKit
 import CoreLocation
 
-struct RunVM {
+struct TrackingVM {
     let distanceText: String
     let paceText: String
     let caloriesText: String
@@ -17,23 +17,23 @@ struct RunVM {
     let timeText: String
     let isPaused: Bool
 }
-protocol RunViewProtocol: AnyObject {
+protocol TrackingViewProtocol: AnyObject {
     var vc: UIViewController { get }
-    func render(_ vm: RunVM)
+    func render(_ vm: TrackingVM)
     func showPermissionHint()
     func closeAfterSaved()
     func showError(_ msg: String)
 }
-protocol RunPresenterProtocol: AnyObject {
-    func attach(view: RunViewProtocol)
+protocol TrackingPresenterProtocol: AnyObject {
+    func attach(view: TrackingViewProtocol)
     func viewDidLoad()
     func tapPauseResume()
     func tapStop()
 }
 
-final class RunPresenter: RunPresenterProtocol {
-    private weak var view: RunViewProtocol?
-    private let interactor: RunInteractorProtocol
+final class TrackingPresenter: TrackingPresenterProtocol {
+    private weak var view: TrackingViewProtocol?
+    private let interactor: TrackingInteractorProtocol
     
     private var startAt: Date?
     private var timer: Timer?
@@ -41,46 +41,57 @@ final class RunPresenter: RunPresenterProtocol {
     private var distance: Double = 0 // meters
     private var elevGain: Double = 0
     private var lastLoc: CLLocation?
-    private var isPaused = false
+    private var isPaused = true
+    private var started = false
     private var calories: Double = 0
     private var bpm: Int? = nil
     
-    init(interactor: RunInteractorProtocol) { self.interactor = interactor }
+    init(interactor: TrackingInteractorProtocol) { self.interactor = interactor }
     
-    func attach(view: RunViewProtocol) { self.view = view }
+    func attach(view: TrackingViewProtocol) { self.view = view }
     
     func viewDidLoad() {
         interactor.askPermission { [weak self] granted in
             guard let self else { return }
-            if granted {
-                self.start()
-            } else {
-                self.view?.showPermissionHint()
-            }
+            if granted { self.view?.showPermissionHint() }
+            self.render()
         }
         interactor.onLocation = { [weak self] loc in self?.handle(loc) }
         interactor.onHeartRate = { [weak self] hr in self?.bpm = hr }
     }
     
     private func start() {
+        guard !started else { return }
+        started = true
+        isPaused = false
         startAt = Date()
-        elapsed = 0; distance = 0; elevGain = 0; lastLoc = nil; calories = 0; isPaused = false; bpm = nil
+        elapsed = 0; distance = 0; elevGain = 0; lastLoc = nil; calories = 0; bpm = nil
         interactor.start()
         runTimer()
         render()
     }
     
+    private func stopTimer() {
+        timer?.invalidate()
+        timer = nil
+    }
+    
     func tapPauseResume() {
+        guard started else {
+            start()
+            return
+        }
         isPaused.toggle()
-        if isPaused { interactor.pause(); timer?.invalidate() }
-        else { interactor.resume(); runTimer() }
+        if isPaused { interactor.pause(); stopTimer() }
+        else        { interactor.resume(); runTimer() }
         render()
     }
     
     func tapStop() {
+        started = false
         timer?.invalidate()
         interactor.stop()
-        interactor.saveRun(distance: distance, duration: elapsed, calories: calories, elevationGain: elevGain) { [weak self] result in
+        interactor.saveTracking(distance: distance, duration: elapsed, calories: calories, elevationGain: elevGain) { [weak self] result in
             switch result {
             case .success: self?.view?.closeAfterSaved()
             case .failure(let err): self?.view?.showError(err.localizedDescription)
@@ -89,6 +100,7 @@ final class RunPresenter: RunPresenterProtocol {
     }
     
     private func runTimer() {
+        stopTimer()
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             guard let self else { return }
             self.elapsed += 1
@@ -111,12 +123,13 @@ final class RunPresenter: RunPresenterProtocol {
     }
     
     private func render() {
+        let ctaTitle: String = !started ? "Start" : (isPaused ? "Resume" : "Pause")
         let pace: String = {
             guard distance > 0, elapsed > 0 else { return "--'--\"" }
             let secPerKm = elapsed / max(distance/1000, 0.0001)
             return Self.formatPace(secPerKm)
         }()
-        let vm = RunVM(
+        let vm = TrackingVM(
             distanceText: String(format: "%.2f", distance/1000) + " KM",
             paceText: pace,
             caloriesText: String(format: "%.0f Kcal", calories),

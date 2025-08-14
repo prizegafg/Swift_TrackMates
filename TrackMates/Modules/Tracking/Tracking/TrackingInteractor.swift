@@ -1,5 +1,5 @@
 //
-//  RunInteractor.swift
+//  TrackingInteractor.swift
 //  TrackMates
 //
 //  Created by Prizega Fromadia on 06/08/25.
@@ -10,19 +10,19 @@ import CoreLocation
 import FirebaseAuth
 import FirebaseCore
 
-protocol RunInteractorProtocol: AnyObject {
+protocol TrackingInteractorProtocol: AnyObject {
     var onLocation: ((CLLocation) -> Void)? { get set }
-    var onHeartRate: ((Int) -> Void)? { get set } // reserved for HK/Bluetooth in future
+    var onHeartRate: ((Int) -> Void)? { get set } 
     func askPermission(_ done: @escaping (Bool) -> Void)
     func start()
     func pause()
     func resume()
     func stop()
-    func saveRun(distance: Double, duration: TimeInterval, calories: Double, elevationGain: Double, completion: @escaping (Result<Void, Error>) -> Void)
+    func saveTracking(distance: Double, duration: TimeInterval, calories: Double, elevationGain: Double, completion: @escaping (Result<Void, Error>) -> Void)
     func estimateCalories(distance: Double, duration: TimeInterval) -> Double
 }
 
-final class RunInteractor: RunInteractorProtocol {
+final class TrackingInteractor: TrackingInteractorProtocol {
     private let loc: LocationServiceProtocol
     private let repo: TrackingRepositoryProtocol
     private let service: TrackingServiceProtocol
@@ -40,12 +40,14 @@ final class RunInteractor: RunInteractorProtocol {
     }
     
     func askPermission(_ done: @escaping (Bool) -> Void) {
+        var fired = false
         loc.onAuthChange = { st in
+            guard !fired else { return }
             switch st {
-            case .authorizedWhenInUse, .authorizedAlways: done(true)
-            case .denied, .restricted: done(false)
+            case .authorizedWhenInUse, .authorizedAlways: fired = true; done(true)
+            case .denied, .restricted:                   fired = true; done(false)
             case .notDetermined: break
-            @unknown default: done(false)
+            @unknown default:                            fired = true; done(false)
             }
         }
         loc.requestAuth()
@@ -55,19 +57,17 @@ final class RunInteractor: RunInteractorProtocol {
     func resume()  { loc.start() }
     func stop()    { loc.stop() }
     
-    func saveRun(distance: Double, duration: TimeInterval, calories: Double, elevationGain: Double, completion: @escaping (Result<Void, Error>) -> Void) {
-        let entity = RunEntity(id: UUID().uuidString,
+    func saveTracking(distance: Double, duration: TimeInterval, calories: Double, elevationGain: Double, completion: @escaping (Result<Void, Error>) -> Void) {
+        let entity = TrackingEntity(id: UUID().uuidString,
                                distance: distance,
                                duration: duration,
                                date: Date(),
                                calories: calories,
                                elevationGain: elevationGain)
-        // 1) Save local
-        repo.saveRun(entity) { [weak self] localRes in
+        repo.saveTracking(entity) { [weak self] localRes in
             switch localRes {
             case .failure(let e): completion(.failure(e))
             case .success:
-                // 2) Sync to cloud (best-effort)
                 guard let uid = self?.auth.currentUserId() else { completion(.success(())); return }
                 let payload: [String: Any] = [
                     "id": entity.id,
@@ -77,8 +77,8 @@ final class RunInteractor: RunInteractorProtocol {
                     "calories": entity.calories,
                     "elevationGain": entity.elevationGain
                 ]
-                self?.service.saveRun(userId: uid, payload: payload) { _ in
-                    completion(.success(())) // ignore cloud error for UX; bisa kamu log
+                self?.service.saveTracking(userId: uid, payload: payload) { _ in
+                    completion(.success(()))
                 }
             }
         }
@@ -87,11 +87,10 @@ final class RunInteractor: RunInteractorProtocol {
     // Sederhana: gunakan MET by speed (rough)
     func estimateCalories(distance: Double, duration: TimeInterval) -> Double {
         guard duration > 0 else { return 0 }
-        let speedKmh = (distance/1000) / (duration/3600) // km/h
+        let speedKmh = (distance/1000) / (duration/3600)
         let met: Double = {
-            // referensi kasar: 7–16 MET tergantung pace
             switch speedKmh {
-            case ..<6.0: return 6.0       // jog sangat pelan
+            case ..<6.0: return 6.0
             case ..<8.0: return 8.3
             case ..<10:  return 9.8
             case ..<12:  return 11.0
@@ -100,7 +99,7 @@ final class RunInteractor: RunInteractorProtocol {
             default:     return 16.0
             }
         }()
-        let weightKg: Double = 70 // TODO: ambil dari profile user/settings
+        let weightKg: Double = 70
         let minutes = duration/60
         return met * 3.5 * weightKg / 200.0 * minutes
     }

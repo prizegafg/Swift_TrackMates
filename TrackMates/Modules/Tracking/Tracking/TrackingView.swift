@@ -1,5 +1,5 @@
 //
-//  RunView.swift
+//  TrackingView.swift
 //  TrackMates
 //
 //  Created by Prizega Fromadia on 06/08/25.
@@ -7,8 +7,8 @@
 
 import UIKit
 
-final class RunView: UIViewController, RunViewProtocol {
-    var presenter: RunPresenterProtocol!
+final class TrackingView: UIViewController, TrackingViewProtocol {
+    var presenter: TrackingPresenterProtocol!
 
     // MARK: - UI
     private enum UIK { static let side: CGFloat = 22 }
@@ -75,10 +75,10 @@ final class RunView: UIViewController, RunViewProtocol {
         presenter.viewDidLoad()
     }
 
-    // MARK: - RunViewProtocol
+    // MARK: - TrackingViewProtocol
     var vc: UIViewController { self }
 
-    func render(_ vm: RunVM) {
+    func render(_ vm: TrackingVM) {
         bigDistance.text = vm.distanceText
         setMetric(tag: 101, value: vm.paceText)
         setMetric(tag: 102, value: vm.caloriesText)
@@ -106,7 +106,7 @@ final class RunView: UIViewController, RunViewProtocol {
 }
 
 // MARK: - Build
-private extension RunView {
+private extension TrackingView {
     func buildUI() {
         buildHeader()
         buildStatsCard()
@@ -160,7 +160,7 @@ private extension RunView {
             $0.layer.cornerRadius = 30
         }
         btnLeft.setImage(UIImage(systemName: "stop.fill"), for: .normal)
-        btnCenter.setImage(UIImage(systemName: "pause.fill"), for: .normal)
+        btnCenter.setImage(UIImage(systemName: "play.fill"), for: .normal)
         btnRight.setImage(UIImage(systemName: "location.fill"), for: .normal)
 
         controlRow.axis = .horizontal
@@ -173,7 +173,7 @@ private extension RunView {
 }
 
 // MARK: - Layout
-private extension RunView {
+private extension TrackingView {
     func layoutUI() {
         layoutHeader()
         layoutStatsCard()
@@ -222,7 +222,7 @@ private extension RunView {
 }
 
 // MARK: - Helpers & Actions
-private extension RunView {
+private extension TrackingView {
     func row() -> UIStackView {
         let r = UIStackView()
         r.axis = .horizontal
@@ -247,5 +247,14 @@ private extension RunView {
 
     @objc func closeTap()    { dismiss(animated: true) }
     @objc func pauseResume() { presenter.tapPauseResume() }
-    @objc func stopTap()     { presenter.tapStop() }
+    @objc func stopTap() {                   
+        let a = UIAlertController(title: "Finish run?",
+                                  message: "Do you want to save and finish this session?",
+                                  preferredStyle: .actionSheet)
+        a.addAction(UIAlertAction(title: "Finish & Save", style: .destructive) { [weak self] _ in
+            self?.presenter.tapStop()
+        })
+        a.addAction(UIAlertAction(title: "Continue", style: .cancel))
+        present(a, animated: true)
+    }
 }

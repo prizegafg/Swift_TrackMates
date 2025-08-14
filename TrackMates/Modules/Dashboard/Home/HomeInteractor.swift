@@ -69,7 +69,7 @@ final class HomeInteractor: HomeInteractorProtocol {
     }
 
     func loadWeeklyStats(completion: @escaping (Result<HomeStatsVM, Error>) -> Void) {
-        trackingRepo.getRuns { _ in
+        trackingRepo.getTracking { _ in
             let series: [Double] = [13.2, 8.25, 0.0, 7.8, 4.2, 9.0, 6.3]
             let total = series.reduce(0, +)
             let vm = HomeStatsVM(

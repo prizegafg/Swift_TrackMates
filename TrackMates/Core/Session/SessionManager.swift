@@ -92,8 +92,7 @@ final class SessionManager {
         if let uid = sessionService.currentUserId() {
             userRepo.get(uid) { _ in }
         }
-        trackingRepo.getRuns { _ in }
-        trackingRepo.getRides { _ in }
+        trackingRepo.getTracking { _ in }
         caloryRepo.getAll { _ in }
         eventsRepo.getPastEvents { _ in }
         eventsRepo.getSharedMedia { _ in }

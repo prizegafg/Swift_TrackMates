@@ -10,8 +10,9 @@ import UIKit
 // MARK: - View Contracts
 protocol ActivityViewProtocol: AnyObject {
     func setTitle(_ t: String)
-    func setQuickActions(_ titles: [String])      // ["Run","Walk","Bike"]
-    func renderRecent(_ vm: RecentActivityVM)      // mock summary
+    func setQuickActions(_ titles: [String])
+    func renderRecent(_ vm: RecentActivityVM)
+    func renderSummary(_ vm: ActivitySummaryVM)
 }
 
 // MARK: - Presenter Contracts
@@ -29,6 +30,17 @@ struct RecentActivityVM {
     let elevationText: String    // e.g. "4.1 m"
     let durationText: String     // e.g. "00:30:20"
     let sparkline: [Double]      // small chart values
+}
+
+struct ActivitySummaryItemVM {
+    let title: String        // ex: "Today"
+    let value: String        // ex: "5.72 KM"
+    let icon: String         // SF Symbols name, ex: "sun.max.fill"
+}
+
+struct ActivitySummaryVM {
+    let title: String        // ex: "Your Activity"
+    let items: [ActivitySummaryItemVM]
 }
 
 // MARK: - Presenter
@@ -57,6 +69,16 @@ final class ActivityPresenter: ActivityPresenterProtocol {
             sparkline: [0.1,0.6,0.35,0.8,0.55,0.9,0.7]
         )
         view?.renderRecent(vm)
+        
+        let summary = ActivitySummaryVM(
+            title: "Your Activity",
+            items: [
+                .init(title: "Today",      value: "5.72 KM",       icon: "sun.max.fill"),
+                .init(title: "Yesterday",  value: "12,876 Steps",  icon: "clock.fill"),
+                .init(title: "Last Week",  value: "19.8 KM",       icon: "calendar")
+            ]
+        )
+        view?.renderSummary(summary)
     }
     
     func startRun(from vc: UIViewController) {

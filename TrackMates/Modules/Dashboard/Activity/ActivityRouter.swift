@@ -15,7 +15,7 @@ protocol ActivityRouterProtocol: AnyObject {
 final class ActivityRouter: ActivityRouterProtocol {
     
     func presentRun(from: UIViewController) {
-        let runVC = RunRouter.makeModule()
+        let runVC = TrackingRouter.makeModule()
         runVC.modalPresentationStyle = .fullScreen
         from.present(runVC, animated: true)
     }

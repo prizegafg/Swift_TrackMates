@@ -15,12 +15,12 @@ protocol LocationServiceProtocol: AnyObject {
     func start()
     func pause()
     func stop()
-    var isRunning: Bool { get }
+    var isTracking: Bool { get }
 }
 
 final class LocationService: NSObject, CLLocationManagerDelegate, LocationServiceProtocol {
     private let mgr = CLLocationManager()
-    private(set) var isRunning = false
+    private(set) var isTracking = false
     var onAuthChange: ((CLAuthorizationStatus) -> Void)?
     var onLocation: ((CLLocation) -> Void)?
 
@@ -41,21 +41,21 @@ final class LocationService: NSObject, CLLocationManagerDelegate, LocationServic
         }
     }
     func start() {
-        guard !isRunning else { return }
-        isRunning = true
+        guard !isTracking else { return }
+        isTracking = true
         mgr.allowsBackgroundLocationUpdates = true
         mgr.startUpdatingLocation()
         
     }
     
     func pause() {
-        guard isRunning else { return }
+        guard isTracking else { return }
         mgr.stopUpdatingLocation()
-        isRunning = false
+        isTracking = false
     }
     
     func stop()  {
-        isRunning = false
+        isTracking = false
         mgr.stopUpdatingLocation()
         mgr.allowsBackgroundLocationUpdates = false
     }
