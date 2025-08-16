@@ -16,7 +16,6 @@ final class TrackingView: UIViewController, TrackingViewProtocol {
     // Header
     private let titleLbl: UILabel = {
         let l = UILabel()
-        l.text = "RUNNING"
         l.font = .systemFont(ofSize: 16, weight: .heavy)
         l.textAlignment = .center
         l.textColor = .tmLabelPrimary
@@ -96,12 +95,17 @@ final class TrackingView: UIViewController, TrackingViewProtocol {
         present(a, animated: true)
     }
 
-    func closeAfterSaved() { dismiss(animated: true) }
+    func closeAfterSaved() {
+        dismiss(animated: true)
+    }
 
     func showError(_ msg: String) {
         let a = UIAlertController(title: "Error", message: msg, preferredStyle: .alert)
         a.addAction(UIAlertAction(title: "OK", style: .default))
         present(a, animated: true)
+    }
+    func showTitle(_ text: String) {
+        titleLbl.text = text
     }
 }
 

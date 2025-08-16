@@ -10,6 +10,10 @@ import CoreLocation
 import FirebaseAuth
 import FirebaseCore
 
+enum TrackingMode {
+    case run, walk, bike
+}
+
 protocol TrackingInteractorProtocol: AnyObject {
     var onLocation: ((CLLocation) -> Void)? { get set }
     var onHeartRate: ((Int) -> Void)? { get set } 

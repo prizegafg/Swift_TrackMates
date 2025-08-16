@@ -19,7 +19,7 @@ protocol ActivityViewProtocol: AnyObject {
 protocol ActivityPresenterProtocol: AnyObject {
     func attach(view: ActivityViewProtocol)
     func viewDidLoad()
-    func startRun(from vc: UIViewController)
+    func startActivity(from vc: UIViewController, mode: TrackingMode)
 }
 
 // MARK: - View Models
@@ -81,7 +81,7 @@ final class ActivityPresenter: ActivityPresenterProtocol {
         view?.renderSummary(summary)
     }
     
-    func startRun(from vc: UIViewController) {
-        router.presentRun(from: vc)
+    func startActivity(from vc: UIViewController, mode: TrackingMode) {
+        router.presentTracking(from: vc, mode: mode)
     }
 }

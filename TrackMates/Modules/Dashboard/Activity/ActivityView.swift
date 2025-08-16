@@ -273,11 +273,15 @@ private extension ActivityView {
 }
 
 extension ActivityView {
-    func setUpAction(){
-        runBtn.addTarget(self, action: #selector(runTap), for: .touchUpInside)
+    func setUpAction() {
+        runBtn.addTarget(self, action: #selector(runTap),  for: .touchUpInside)
+        walkBtn.addTarget(self, action: #selector(walkTap), for: .touchUpInside)
+        bikeBtn.addTarget(self, action: #selector(bikeTap), for: .touchUpInside)
     }
     
-    @objc func runTap() { presenter.startRun(from: self) }
+    @objc private func runTap()  { presenter.startActivity(from: self, mode: .run)  }
+    @objc private func walkTap() { presenter.startActivity(from: self, mode: .walk) }
+    @objc private func bikeTap() { presenter.startActivity(from: self, mode: .bike) }
 
 }
 

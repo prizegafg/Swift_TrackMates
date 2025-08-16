@@ -8,17 +8,17 @@
 import UIKit
 
 protocol ActivityRouterProtocol: AnyObject {
-    func presentRun(from: UIViewController)
+    func presentTracking(from: UIViewController, mode: TrackingMode)
     
 }
 
 final class ActivityRouter: ActivityRouterProtocol {
     
-    func presentRun(from: UIViewController) {
-        let runVC = TrackingRouter.makeModule()
-        runVC.modalPresentationStyle = .fullScreen
-        from.present(runVC, animated: true)
-    }
+    func presentTracking(from: UIViewController, mode: TrackingMode) {
+            let vc = TrackingRouter.makeModule(mode: mode)
+            vc.modalPresentationStyle = .fullScreen
+            from.present(vc, animated: true)
+        }
     
 }
 

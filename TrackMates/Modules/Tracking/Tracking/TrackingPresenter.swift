@@ -23,6 +23,7 @@ protocol TrackingViewProtocol: AnyObject {
     func showPermissionHint()
     func closeAfterSaved()
     func showError(_ msg: String)
+    func showTitle(_ text: String)
 }
 protocol TrackingPresenterProtocol: AnyObject {
     func attach(view: TrackingViewProtocol)
@@ -34,6 +35,7 @@ protocol TrackingPresenterProtocol: AnyObject {
 final class TrackingPresenter: TrackingPresenterProtocol {
     private weak var view: TrackingViewProtocol?
     private let interactor: TrackingInteractorProtocol
+    private let mode: TrackingMode
     
     private var startAt: Date?
     private var timer: Timer?
@@ -46,7 +48,11 @@ final class TrackingPresenter: TrackingPresenterProtocol {
     private var calories: Double = 0
     private var bpm: Int? = nil
     
-    init(interactor: TrackingInteractorProtocol) { self.interactor = interactor }
+    init(interactor: TrackingInteractorProtocol, mode: TrackingMode) {
+        self.interactor = interactor
+        self.mode = mode
+        
+    }
     
     func attach(view: TrackingViewProtocol) { self.view = view }
     
@@ -56,6 +62,15 @@ final class TrackingPresenter: TrackingPresenterProtocol {
             if granted { self.view?.showPermissionHint() }
             self.render()
         }
+        
+        let title: String
+        switch mode {
+        case .run:  title = "RUNNING"
+        case .walk: title = "WALKING"
+        case .bike: title = "CYCLING"
+        }
+        view?.showTitle(title)
+        
         interactor.onLocation = { [weak self] loc in self?.handle(loc) }
         interactor.onHeartRate = { [weak self] hr in self?.bpm = hr }
     }

@@ -12,11 +12,12 @@ protocol TrackingRouterProtocol: AnyObject { }
 final class TrackingRouter: TrackingRouterProtocol { }
 
 extension TrackingRouter {
-    static func makeModule() -> UIViewController {
+    static func makeModule(mode: TrackingMode) -> UIViewController {
         let interactor = TrackingInteractor()
-        let presenter  = TrackingPresenter(interactor: interactor)
+        let presenter  = TrackingPresenter(interactor: interactor, mode: mode)
         let view       = TrackingView()
         view.presenter = presenter
+        presenter.attach(view: view)
         return view
     }
 }
